@@ -1,0 +1,3056 @@
+<link rel="stylesheet" href="main.css"> 
+ /* it use to link the css document to html document and when we use multiple page application it's good to use only a css document for all the pages because the browser will use the cache for the other pages and the browser will don't have to download it everytime when you open a new page from that site */
+ 
+
+ /* We can use Google Fonts to style our elements. */
+
+ * {
+   color: red;
+} /* this is the uNIVERSAL SELECTOR that will be applied to all the HTML elements */
+
+[disabled] {
+  color: red;
+} /* this will match all the elements that have the [disabled] attribute */
+
+
+/* See Specifity.png to understand how to use CSS to target the HTML element */
+
+/* Inherited is when an element inherit a style from his parent (has low specifity) */
+
+font-family: inherit; /* it will take the font-family(in this case from it's parent or parent of parend and so on) */ 
+ 
+/* COMBINATORS  
+
+Adjacement Sibling */
+
+h2 + p {
+  color: red;
+}  /* Paragraphs that come immediately after any h2 */
+
+/* General Sibling */
+
+h2 ~ p {
+  color: red;
+}  /* Paragraphs that are siblings of and
+subsequent to any h2 */
+
+/* Child */
+
+div > p {
+  color: red;
+} /* Paragraphs that are direct children of any div */
+
+/* Descendent */
+
+div p {
+  color: red;
+} /* Paragraphs that are children(even if they are not direct and it's a descendent) of any div */
+
+
+/* 03 Chapter DIVING DEEPER INTO CSS */
+
+/* 27 */
+
+/* Body usually has a default margin, so it's good practice before starting to write your CSS code it's good to set to the body margin: 0; */
+
+/* MARGIN COLLAPSING
+If we have to elements the same one bellow another the MARGIN will COLAPSE, which means the BIGGER MARGIN WINS. */
+
+/* Block level elements it will take the entire width of the page by default */
+
+width: 50%; /* it will take just half of the page(or the surroding element, if is a child), if we use 100% it will be like the defaul, and this is responsive */
+
+height: 100%; /* if you want to set the height of something to 100% you should set it to all the parents of that element to work for element you want */
+
+
+
+/* BOX-SIZING */
+
+/* The default box-sizing is content-box; */
+
+* { 
+  box-sizing: border-box; /* if we put it to the body, the block level element will overwrite this property and value, but if we use UNIVERSAL SELECTOR, not */
+}
+body {
+  font-family: 'Montserrat', sans-serif;
+  margin: 0;
+}
+
+#product-overview {
+  background: #ff1b68;
+  width: 100%;
+  height: 528px;  
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  box-sizing: border-box; /* in this case the height it's 528px with border, padding and margin size, if we use the content-box value, then it will without this, just the content size itself */
+}
+
+<a></a> /* are rendering inline, it take width as much as the content needs because it's display inline by default */
+
+/* the block elements take the entire width available  */
+
+display: none; /* it will remove that element, it's taken out from the document flow, but it's still in the DOM, usually it's use with JavaScript for example to be show something when you click a button */
+
+display: inline-block; /* it wil dispay a list for example in inline block level, what means that we can add border, margins and so on to them */
+
+Here's an example for visibility: hidden :
+
+.box-1 {
+    visibility: hidden;
+}
+
+.box-2 {
+    display: inline-block;
+}
+Will render:
+
+_x 
+
+where _  simply is an empty spot and x  has the class box-2 .
+
+The element is only invisible, it's not removed from the document flow and of course also not from the DOM.
+
+
+It's not really a CSS topic, though it's related to it: The difference between block-level and inline elements.
+
+You can read a more detailed article (which also includes a YouTube video about HTML at the top of the page) here: https://academind.com/learn/html/beginner-s-guide/diving-deeper-into-html#block-level-vs-inline-elements
+
+Here's the executive summary:
+
+Block-level elements are rendered as a block and hence take up all the available horizontal space. You can set margin-top and margin-bottom and two block-level elements will render in two different lines.
+
+Some examples are: <div> , <section> , <article> , <nav>  but also <h1> , <h2>  etc and <p> .
+
+Inline elements on the other hand only take up the space they require to fit their content in. Hence two inline-elements will fit into the same line (as long as the combined content doesn't take up the entire space in which case a line break would be added).
+
+They also use the box-model you learned about but margin-top  and margin-bottom  have no effect on the element. padding-top  and padding-bottom  also have a different effect. They don't push the adjacent content away but they will do so with the element border. You can read more about that behavior in the following article: https://hacks.mozilla.org/2015/03/understanding-inline-box-model/
+
+Additionally, setting a width  or height  on an inline element also has no effect. The width and height is auto to take as much space as required by the content.
+
+Logically, this makes sense since you don't want your inline elements to destroy your multi-line text-layout. If you want to do so or need both block-level and inline behavior, you can set display: inline-block  to merge behaviors.
+
+Some example elements are: <a> , <span> , <img> 
+
+
+/* When you calculate the inline-block width for some elements use width: calc(100% - 54px); 54px in this case is a little bigger cause can cause some unwanted style check Video 38 */
+
+/* Pseudo-class defines the style of a special state of an element like hover and active element:hover {}
+
+Pseudo-elements defines the style of a specific part of an element 
+ element::first-letter {} - this allow us to style the first letter of the element */ 
+
+.main-nav__item a::after {
+ content: " (Link)";
+ color: red;
+} /* it will add " (Link)" to DOM with color red */
+
+p::first-letter {
+  color: red;
+  font-size: 20px;
+}
+
+
+.main-nav__item a:hover,
+.main-nav__item a:active { /* in this way we are grouping */
+  color: white;
+} 
+
+
+.main-nav__item--cta a:hover,
+.main-nav__item--cta a:active {
+  color: #ff1b68;
+  background: white;
+  border: none; /* if there if a border, when we hover it will disapaire because of this property */ 
+} 
+
+
+/* Try to use classes even if you want to style one element and try do not use ID's */
+
+div {
+  color: red !important; /* overwrites specifity and all other selectors and don't used in general */
+}
+
+:not(p) {
+  color: blue;
+}
+/* Selects any element that is NOT a paragraph */
+
+
+
+box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, 0.5 );
+
+
+font: inherit;
+
+
+cursor: pointer; /* when you hover over a button for example, the cursor is changing to what you want */
+
+.button:focus {
+  outline: none;
+} /* take the 'blue' border around a button */
+
+margin: 0 auto; /* works to center things horizontally, it not works to center things vertically */
+
+.clearfix {
+  clear: both;
+} /* if something was float(to right for example) the element below the float element it will take it's place, so it will one over anoter, with clear: both, we make the element to stay were it's belongs below the div => HMTL we make an empty div with class .clearfix, in this case */
+
+position: static; /* it's default property for elements to follow the document flow */
+
+position: absolute;
+
+position: relative;
+
+position: fixed;
+
+position: sticky;
+
+
+/* CHANGING the position */ 
+
+top: pixels; /* move it up by pixels */
+bottom: pixels;
+right: pixels;
+left: pixels;
+
+/* we can use this value in combination, with this value we change the position of the elements in the document flow */
+
+
+
+
+position: fixed; /* the element which have this property behaves like an inline-block element and isn't in the document flow*/
+
+.parent .child-1 {
+  position: fixed;
+  width: 400px;
+  top: 0; /* this element is fixed at the begining of the page and if we scrool down it will remain there, on the screen */
+  left: 0;
+  margin: 0;
+}  
+
+/* We can use the fixed position to block-level elements and to inline-level elements, it will have the same behavior */
+
+
+z-index: auto; /* z-index is the propery that allow us to position element on the z-axis, if the position of the element is static, z-index will not have any effect on that element, auto is 0 z-index value, if we have values under 0 for z-index, like z-index: -25; this means that we want to position under  */
+
+
+.background {
+  background: url("../images/plans-background.jpg");
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  z-index: -1; /* it will positionated the background under the other elements, or under the elements which make part of the document flow */
+}
+
+z-index: /* will be on screen the elements with z-index bigger */
+
+position: absolute; /* take the element out of the flow as well, like position: fixed; */
+
+
+REWATCH 87 
+
+
+position: relative; /* is not take out the element from the document flow */
+
+
+overflow: hidden; /* if an element is position out of his parent, it will not be display because of this property */
+
+
+position: sticky; /* it's behave like fixed till reach the boundary of his parent */
+
+z-index /* has impact only on the elements from that parent, for example see video 91 */
+
+
+background-image: url("freedom.jpg");
+background-size: 300px;
+background-repeat: no-repeat;
+
+background-size: cover; /* it has width 100% all the time, and it's crop from the image if it's need it, it will fill the entire container */
+
+background-size: contain; /* it will show the full image, but in my opinion isn't the best, we don't fill the entire container where we display the background */
+
+
+background-image: url("freedom.jpg");
+background-size: cover;
+background-position: 20px 50px; /* this will move the image 20px to the left, and 50px from the top to bottom */
+background-repeat: no-repeat;
+
+
+background-image: url("freedom.jpg");
+background-size: cover;
+background-position: left 10% bottom 20%; /* or percentage, this will show for 10% from the left and 20% from the bottom,  in this way we can control the background position*/
+background-repeat: no-repeat;
+
+
+
+background-image:
+
+background-color:
+
+background-position:
+
+background-size:
+
+background-repeat:
+
+background-origin:
+
+background-clip:
+
+background-attachment:
+
+
+
+background-position: border-box; /* by default is padding-box value, what that means that if we have a border, dashed let say, the image it will go underneath the top and the bottom, but it will not go underneath the left or the right, see clip 99, but if we want to go underneath top, right, bottom and left, we have to set the value of the background-position to border-box */
+
+background-clip: padding-box; /* this will clip the background image under all borders, top, right, bottom and left. */
+
+
+background-attachment: /* we don't used that often in reality  https://developer.mozilla.org/en-US/docs/Web/CSS/background-attachment */
+
+
+
+background: url("freedom.jpg") left 10% bottom 20%/cover no-repeat border-box; /* this is the shorthand of all properties bellow  before / we have the background-position and after / we have background-size */ 
+background-image: url("freedom.jpg");
+background-size: cover;
+background-position: left 10% bottom 20%;
+background-repeat: no-repeat;
+background-origin: border-box;
+background-clip: border-box;
+
+
+/* if you set a height for a container, the image will not be afected (if that container has an image inside it) */
+
+/* if we set the height of an image to 100%, it will not take the 100% of the container where the image is, but will take 100% of the size that image has */
+/* same is with the width on the images */ 
+/* but it the element which surround the image is inline-block display, it will work, the percentage, so will not work if the image is nested in an inline element */
+
+/* the shorthand property of background, will overwrite all the "other" properties */
+
+
+
+.testimonial__image-container {
+  width: 60%;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.testimonial__image {
+  width: 100%;
+}
+
+.testimonial__info {
+  text-align: right;
+  padding: 14px;
+  display: inline-block;
+  vertical-align: middle;
+  width: 30%;
+}           /* as we can see we used the dispay: inline-block for container that has an image and for text, first has 60% and the other one has the 30% of the line, 103 video*/ 
+
+
+.testimonial__image-container {
+  width: 60%;
+  display: inline-block;
+  vertical-align: middle;
+  box-shadow: 3px 3px 5px 3px rgba(0, 0,0, 0.3)
+}
+
+.testimonial__image {
+  width: 100%;
+  vertical-align: top;
+}  /* if we want to set a shodow to an image, will use actually set the shadow to container that surround that image, and will set the vertical-align: top or bottom, to the image itself to get rid of the whitespace as example above, 103 video for more details */
+
+
+
+/* Gradiats are treated like images so we will use the same properties for them (example backgraound-image: "gradient";) */ 
+
+background-image: linear-gradient(red, blue); /* here we have a gradient from top to bottom of red and blue, the default behaviour of the gradient is from top to bottom */
+
+
+background-image: linear-gradient(to left bottom, red, blue); /* it start from the right top, an goes to the left bottom */
+
+background-image: linear-gradient(30deg, red, blue); /* the angle has 30degrees in this case */
+
+background-image: linear-gradient(0deg, red, blue); /* in this case it will start from the bottom because the angle has 0degrees */
+
+background-image: linear-gradient(180deg, red, blue, green, yellow, orange); /* you can put as many colors you want */
+
+background-image: linear-gradient(180deg, red, transparent);
+
+background-image: linear-gradient(180deg, red, rgba(0,0,0,0.5));
+
+background-image: linear-gradient(180deg, red 70%, blue, rgba(0,0,0,0.5)); /* in this case the red color will take the 70% from the full gradient, more details about gradients on 104 video */
+
+
+
+background-image: radial-gradient(red, blue, green); /* the default behaviour is an elipse form */
+
+background-image: radial-gradient(circle, red, blue, green);  /* we can change it just to circle like in this example */
+
+background-image: radial-gradient(circle at top left,  red, blue, green);  /* the gradiant will start from the top left, which means will dispay the bottom-right of it's default */
+
+background-image: radial-gradient(circle at 20% 50%,  red, blue, green);
+
+background-image: radial-gradient(circle 20px at 20% 50%,  red, blue, green);  /* it's work just for the circle radial-gradient */
+
+/* for more about radial-gradient see 105 video */
+
+background: linear-gradient(to top, rgba(80,96,18, 0.6) 10%, transparent), url("images/freedom.jpg") left 10% bottom 20%/cover no-repeat border-box, #ff1b68; /* more about this in video 106 */
+
+
+.background {
+  background: url("../images/plans-background.jpg") center/cover;
+  filter: grayscale(100%); /* this make the background-image gray, filter is not support in the Internet Explorer */
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  z-index: -1;
+}
+
+
+/* 113 */
+
+rem 
+em /* this are units that usually we used for font-size */
+
+viewport /* our visible part of the website in the browser */
+
+/* 115 */ 
+/* if we have positon: fixed set to an element, that means the width: 100% (let's say) will refer to viewport */
+
+
+/* 116 */
+/* if we have position: absolute(let's say), that means the width: 100% will take the entire space of the parent element content + padding(which has the position: absolute, relative, fixed, sticky, I THINK  */
+
+
+/* 117 */
+
+/* if we have position: static(or not a specific position) or position: relative  and the width: 100% it will take the entire width of the next ancestor which is at the block level */
+
+/* 118 */
+
+.backdrop {
+  position: fixed;
+  z-index: 100;
+  display: none;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%; /* we can use 100% of height in raport with the viewport because we have position: fixed in this case */
+  background: rgba(0,0,0,0.5);
+}
+
+/* 119 */
+
+
+/* 120 */
+.testimonial__image-container {
+  width: 65%;
+  max-width: 580px;   /* this means that container will not be bigger than 580px(and image inside it as well) */
+  min-width: 350px;   /* this means that container will not be smaller than 350px(and image inside it as well) */
+  display: inline-block;
+  vertical-align: middle;
+  box-shadow: 3px 3px 5px 3px rgba(0, 0,0, 0.3)
+}
+
+.testimonial__image {
+  width: 100%;
+  vertical-align: top;
+}
+
+
+/* 121 */
+/* we can use rem(root em) to set our font-size of the elements and the user will can increase or descrease the font-size from the browser how he likes it, if we use pixels which are fixed, the user cannot change the font-size from the browser, em can have inherit conflicts, so it's better to use rem's */
+
+
+/* 122 */ 
+/* we can use rem's for margin and padding as well and it's indicated to use is cause the user can change the size of them from the broswer if he want */
+/* for border and box-shadow it's OK if we use pixels and 
+ */
+
+
+/* 123 */
+
+
+/* 124 */
+/* vw - viewport width
+   vh - viewport height */
+/* we can used for images or for overlays and ... has not fully support for all browsers */
+
+
+/* 125 */
+
+
+/* 126 */
+
+
+/* 127 */
+/* margin: auto only works for block level elements with an explicitly assigned width though */
+
+
+/* 128 */
+
+
+/* 129 */
+
+
+/* 130 */
+
+
+/* 131 */
+
+
+/* 132 */
+
+
+/* 133 */
+
+
+/* 134 */
+
+
+/* 135 */
+
+
+/* 142 */
+
+
+/* 143 */
+
+
+/* 144 */
+/* hardware pixels are the pixels of the device, the default size of it, but in nowdays all the devices especially the smart one, has lots and lots of pixels or high resolution so, we hava to translate the hardware pixels into software pixels and we are doing this with */ <meta name="viewport" content="width=device-width, initial-scale=1.0"> /* we add this tag in the head of the HTML document */
+https://www.mydevice.io/#compare-devices
+
+
+/* 145 */
+
+
+/* 146 */
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  /* name="viewport" means that we are targeting the viewport, this means that we are tranlating the hardware pixels into softaware pixels, initial-scale=1.0 this means that the page will be displayed without any zooming*/
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes"> /* user-scalable=yes" means that user can zoom in or zoom out the content page, as he prefers, if user-scalable=no", this means that user cannot zoom in or zoom out(which is not recommended), but default option is user-scalable=yes" even if we don't specify this */
+ 
+<meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=yes, maximum-scale=2.0, minimum-scale=1.2"> /* maximum-scale=2.0 this means that we can zoom in for 2.0 on the scale, minimum-scale=1.2 this means that we can zoom out for 1.2 on the scale */
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=yes, maximum-scale=2.0, minimum-scale=1.2"> /* without this meta tag we cannot add a responsive design to our website ***KEEP IN MIND***, if we want to create a site which is not responsive we will not use anymore this meta tag(and that's it) */
+
+
+/* 147 */
+/* The approach which we used to build the site, wasn't the best approach, because nowdays first we create the mobile version and so on, with desktop version and responsive version */
+
+
+/* 148 */
+#product-overview {
+  background: linear-gradient(to top, rgba(80, 68, 18, 0.6) 10%, transparent),
+    url("images/freedom.jpg") left 10% bottom 70%/cover no-repeat border-box,
+    #ff1b68;
+  /* background-image: url("freedom.jpg");
+    background-size: cover;
+    background-position: left 10% bottom 20%; */
+  /* background-repeat: no-repeat;
+    background-origin: border-box;
+    background-clip: border-box; */
+  /* background-image: linear-gradient(180deg, red 70%, blue 60%, rgba(0,0,0,0.5)); */
+  /* background-image: radial-gradient(ellipse farthest-corner at 20% 50%, red, blue 70%, green); */
+  width: 100vw;
+  height: 33vh;
+  margin-top: 2.75rem;
+  /* border: 5px dashed red; */
+  position: relative;
+}
+
+#product-overview h1 {
+  color: white;
+  font-family: "Anton", sans-serif;
+  position: absolute;
+  bottom: 5%;
+  left: 3%;
+  font-size: 1.6rem;
+}
+
+@media (min-width: 40rem) { /* in this case it will apply what is inside the @media query for screens which has the minimin width of 40 rem or bigger (so what for the ohers sizes it will be apply the CSS code which is outsite ouf this @media query) */
+  #product-overview {
+     height: 40vh;
+     background-position: 50% 25%;
+  }
+
+  #product-overview h1 {
+    font-size: 3rem;
+  }
+}
+
+@media (max-width: 40rem) /* this media query will apply just for devices which are smaller or has the width of 40rem */
+
+
+/* 149 */
+/* @media query is like an if-else conditon */
+/* You can have more than one @media query at the same time */
+/* It's good to start first with @media query for the mobile */
+
+@media (min-width: 60rem) {
+
+}
+
+@media (min-width: 40rem) {
+
+}  /* this code wil note work as we want because first we have 60rem and then we have 40rem which means that just 40rem @media query will be apply (we know the code is executed from to top to the bottom) and in this case it can above few lines */
+
+
+/* 150 */ 
+/* You can find the break points which are good if you check www.mydevice.io */
+/* Usually the @media queries are written at the bottom of the CSS code or file, in this way the developers know how to go to find the queries */
+
+
+/* 151 */
+
+
+/* 154 */
+@media (min-width: 40rem) and (min-height: 40rem) { /* this @media query will be applied if min-width is at least 40rem and min-height is 40rem, if we met on of this conditions, the @media, will not be applied */ 
+  #product-overview {
+    height: 40vh;
+    background-position: 50% 25%;
+  }
+
+  #product-overview h1 {
+    font-size: 3rem;
+  }
+}
+
+@media (min-width: 40rem) and (orientation: landscape) { /* this will be applied just if  min-width is at least 40rem or more and the device is in the landscape mode */
+  .plan__list {
+    width: 100%;
+    text-align: center;
+  }
+
+  .plan {
+    display: inline-block;
+    width: 30%;
+    vertical-align: middle;
+    min-width: 13rem;
+    max-width: 25rem;
+  }
+
+  .plan--highlighted {
+    box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@media (min-width: 40rem), (orientation: landscape) { /* this @media will be applied if one of the conditions is met */
+  .plan__list {
+    width: 100%;
+    text-align: center;
+  }
+
+  .plan {
+    display: inline-block;
+    width: 30%;
+    vertical-align: middle;
+    min-width: 13rem;
+    max-width: 25rem;
+  }
+
+  .plan--highlighted {
+    box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, 0.5);
+  }
+}
+
+
+/* 163 */
+/* You can group any of the form group together, like labal and input form in one div and so on(this is one approach) */
+/* I think all element which are nested in a form are inline elements */
+
+
+/* 164 */
+[lang~="eng-us"] {
+  color: red;
+} /* this selector will select this <p lang="en-us en-gb">Hi!</p>, the ~ which is before equal sign means that will select the content which has as a part of the attribute what's after equal sign */
+
+[lang|="en"] {
+  color: red;
+} /* this selector will select the attribute the has the value what is after equal sign or begin with what's after the equal sign <p lang="en-us">Hi!</p> */
+
+[href^="#"] {
+  color: red;
+} /* this selector will select all the elements that has an attribute which starts with what is after equal sign <a href="all">Link<a/> */
+
+[href$==".de"] {
+  color: red;
+} /* this selector will select all the elements that has an attribute which ends with what is after the equal sign <a href="ab.de">Link</a> */
+
+[src*="cdn"] {
+  color: red;
+} /* this selector will select all the elements that has an attribute which contains what is after the equal sign, even if it's in the middle of the attribute or at beggining or even at the end <img src="i.cdn.com"> */
+
+[src*="cdn" i] {
+  color: red;
+} /* this selector will select all the element which has the attribute which contains CDN even if it's with capital letters <img src="i.CDN.com"> */
+
+/* To recap check the 164 video */
+
+
+/* 165 */
+
+
+/* 166 */
+outline: /* it's like a border, but it's comes after the border so you can have them both, it's not counting to block-size and it's not doing anything on the box-shadow, even if you have a big outline, it will not affect your box-shadow */
+
+
+/* 168 */
+/* Usually you use server-side validation */
+
+<form action="index.html" class="signup-form">
+  <label for="title">Title</label>
+  <select id="title">
+      <option value="mr">Mr.</option>
+      <option value="ms">Ms.</option>
+  </select>
+  <label for="first-name">First name</label>
+  <input type="text" id="first-name" required>
+  <label for="last-name">Last name</label>
+  <input type="text" id="last-name" required>
+  <label for="email">E-Mail</label>
+  <input type="email" id="email" required>
+  <label for="password">Password</label>
+  <input type="password" id="password" required>
+  <input type="checkbox" id="agree-terms" required>
+  <label for="agree-terms">Agree to
+      <a href="#">Terms &amp; Conditions</a>
+  </label>
+  <button type="submit" class="button">Sign Up</button>
+</form>
+
+.signup-form input.invalid,
+.signup-form select.invalid,
+.signup-form :invalid {
+  border-color: red !important;
+  background: #faacac; 
+} /* Nice and easy validation, if you aren't complete something, when you're submit that form, you will be aware */
+
+
+/* There's also a :valid pseudoselector */
+
+
+/* 169 */
+
+<button type="submit" class="button" disabled>Sign Up</button>
+
+.button[disabled] {
+  cursor: not-allowed;
+  border: #a1a1a1;
+  background: #ccc;
+  color: #a1a1a1;
+} /* again we enable the button to be pressed with JavaScript */
+
+
+/* 175 */ 
+
+
+
+
+
+@import url('https://fonts.googleapis.com/css?family=Roboto:100,400,900');
+@import url('https://fonts.googleapis.com/css?family=Anton');
+@import url('https://fonts.googleapis.com/css?family=Montserrat:400,700'); /* we can import it directly in the CSS file from the internet as above */
+
+@font-face {
+  font-family: "anonymousPro";
+  src: url("anonymousPro-Regular.ttf") format("truetype");
+} /* we can load it locally from our computer like this directly in the CSS file */;
+
+@font-face {
+  font-family: "AnonymousPro";
+  src: url("AnonymousPro-Bold.ttf") format("truetype");
+  font-weight: 700;
+}
+
+
+
+/* 183 */
+font-variant: small-caps; /* make all the small letters, capital letters
+
+
+/* 184 */
+letter-spacing: 5px; /* space between letters is increased with 5px in this case */
+
+white-space: nowrap; /* the text will be write just on one line and the width will not have impact on that */
+white-space: normal; /* nothing change to our text */
+white-space: pre;
+white-space: pre-wrap;
+white-space: pre-line;
+
+
+/* 185 */
+line-height: 1; /* it's the height of the line how you can see value 1 means like 19 px, 2 means 38 and so on I guess, and this is just for AnonymousPro font-family, for another font-family we'll have another line-height by default */
+font-family: "AnonymousPro", sans-serif;
+
+/* By default the line-height depends on font-family what we are using, we can use pixels to set up the line-height */
+
+
+/* 186 */
+text-decoration: underline;
+text-decoration: overline;
+text-decoration: line-through; /* it will "cut" the text with a line */
+text-decoration: line-through dotted red;
+text-decorarion: underline wavy red; /* wavy it's live waves */
+
+text-shadow: 5px 5px 2px gray; /* first 5px means the shadow on x axys the second 5px means shadow on the y axys, 2px means the opacity(I guess) and gray, the color of the shadow */
+5
+
+/* 187 */
+/* font shorthand */
+font: italic small-caps 700 1.2rem/2 "AnonymousPro", sans-serif;
+  /* font-style font-variant font-weight font-size/line-height font-family */
+  /* any of the first 3 properties should be positioned before the font-size and the line-height should be immediately after font-size with slash '/' */
+/* If you want to use font shorthand there you should use at least 2 properies, font-size and font-family */
+
+
+
+/* 192 FLEXBOX */
+
+
+/* 193 */
+
+
+/* 194 */
+display: flex; /* we create a flex container (which is the parent) in which we have nested element(children) which are flex items*/
+
+/* For parents we can apply these propersties (for flex container) : */
+flex-flow;
+justify-content;
+align-content;
+align-items;
+
+/* For children or flex items we cam apply these properties : */
+order;
+flex;
+align-self;
+
+
+/* 195 */
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex; /* all the elements inside the .flex-container were align in one row */
+}  
+
+/* the height of the row is defined by the element inside of .flex-container which has the highest height defined, if an element hasn't the height definet, it will take the height of the highest element */
+/* if we decrease the width of the "browser" the elements will decrease until will reach the content(or will decrease until the content needs the space inside the element) like paragraph size and so on */
+/* if we increase the "browser" size, the width of the .flex-container it will behave like an block-level element */
+
+.item-1 {
+  background: #ff7300;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+}
+
+.item-2 {
+  background: #ff9640;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 250px;
+  font-size: 1.8rem;
+}
+
+.item-3 {
+  background: #ff9640;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  height: 250px;
+}
+
+.item-4 {
+  background: #f5c096;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 300px;
+  height: 300px;
+}
+
+.item-5 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+}
+
+.item-6 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+}
+
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: inline-flex; /* in this case we will have a row that will have the width exactly as big as the sum of width of the elements inside the .flex-container, in other words the .the container is not 'responsive', it behaves like an inline element, the height of the row will be defined of the highest element from .flex-contaner*/
+}
+
+.item-1 {
+  background: #ff7300;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+}
+
+.item-2 {
+  background: #ff9640;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 250px;
+  font-size: 1.8rem;
+}
+
+.item-3 {
+  background: #ff9640;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  height: 250px;
+}
+
+.item-4 {
+  background: #f5c096;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 300px;
+  height: 300px;
+}
+
+.item-5 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+}
+
+.item-6 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+}
+
+/* 196 */
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap; /* this is the default behaviour of the display: flex */
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap; /* if we apply the flex-wrap: wrap; the container became 'responsive' and when the size reach one of the element, that element will be dispay to the next line or 'row' and it will set the height which has it before the container was set to flex and the width will be reduce as much as content needs space */
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: row;
+  flex-wrap:  wrap-reverse; /* it behaves like flex: wrap; but will display the items on the 'column' in the reverse way an the height of the smaller element will be display from the bottom to the top, not from the top to the bottom like in the others cases */
+} 
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: column; /* the elements will behave like the block element behave, they are display as were before to use display: flex (I guess)*/
+  flex-wrap:  wrap; 
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: column-reverse; /* the element are display as were with flex-direction: column, just they are display from the bottom to the top (cause of -reverse) */
+  flex-wrap: wrap;
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: row-reverse; /* the elements are display as reverse of flex-direction: row; */
+  flex-wrap: wrap;
+}
+
+
+/* 197 */
+/* Main Axis goes from the top left to the top right */
+/* Cross Axis goes from the top left to the bottom left */
+
+/* the above behavior is the default behaviour of how flex */ 
+
+/* row-reverse behave from top right to top left */ 
+/* and the cross axis is going from the top right to right bottom */
+
+/* flex-direction: column
+main axix is from top left to bottom left
+cross axix is from top left to to right */
+
+/* flex-direction: column-reverse
+main axis is from bottom left to top left
+cross axis if from bottom left to bottom right */
+
+
+/* 198 */ 
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */ /* this is the shorthand for flex-direction: row and flew-wrap: wrap */
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: stretch; /* this is the default behaviour, that height is of the highest element */
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: center; /* center the element at the middle of the row */
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: center; /* center the element at the middle of the 'column' along the main axis */
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: flex-start; /* the items are center at the beggining of our cross axis */ 
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: flex-end; /* the items are center at the end of our cross axis */
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: flex-end; /* the items are center at the end of the cross axis */
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  height: 800px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: center; /* the items are center at the middle of the cross axis */
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  height: 800px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: center;
+  justify-content: center; /* now the items are center at the middle of the main axis and at the middle of the cross axis */
+}
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  height: 1300px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: center;
+  justify-content: center; /* the same as for row, just here we have column */
+}
+
+/* 199 */
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  height: 1300px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: center;
+  justify-content: center;
+  align-content: center; /* allow us to align our items along the cross axis */
+}
+  REWATCH THE LAST CLIPS OF FLEXBOX 
+
+  /* 200 */
+
+
+
+
+  /* 205 */
+
+  .flex-container {
+    background: white;
+    padding: 10px;
+    border: 5px solid black;
+    height: 1300px;
+    display: flex;
+    flex-direction: row  ;
+    flex-wrap: wrap;
+    /* flex-flow: row wrap; */
+    align-items: center;
+    justify-content: flex-start;
+}
+
+
+.item-1 {
+    background: #ff7300;
+    color: white;
+    padding: 10px;
+    border: 5px solid black;
+    margin: 10px;
+}
+/* by defaul all the elements inside the flex-container has property order: 0 */
+.item-2 {
+    background: #ff9640;
+    color: white;
+    padding: 10px;
+    border: 5px solid black;
+    margin: 10px;
+    width: 250px;
+    font-size: 1.8rem;
+}
+
+.item-3 {
+    background: #ff9640;
+    color: white;
+    padding: 10px;
+    border: 5px solid black;
+    margin: 10px;
+    height: 250px;
+}
+
+.item-4 {
+    background: #f5c096;
+    color: white;
+    padding: 10px;
+    border: 5px solid black;
+    margin: 10px;
+    width: 300px;
+    height: 300px;
+    order: 1; /* the element with order: highest will be on the right of the row, at the rear or the last one of the row(in this case) */
+}
+
+.item-5 {
+    background: #d3c0b1;
+    color: white;
+    padding: 10px;
+    border: 5px solid black;
+    margin: 10px;
+    width: 350px;
+}
+
+.item-6 {
+    background: #d3c0b1;
+    color: white;
+    padding: 10px;
+    border: 5px solid black;
+    margin: 10px;
+    width: 350px;
+    order: -2; /* the elements with order: lowest will be first in the row(in this case at the left) */
+}
+
+
+
+/* 206 */
+/* align-self property allow us to set the individuals flex-items from a flex-container along the cross axis*/
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  height: 1300px;
+  display: flex;
+  flex-direction: row  ;
+  flex-wrap: wrap;
+  /* flex-flow: row wrap; */
+  align-items: center;
+  justify-content: flex-start;
+}
+
+
+.item-1 {
+  background: #ff7300;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+}
+
+.item-2 {
+  background: #ff9640;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 250px;
+  font-size: 1.8rem;
+}
+
+.item-3 {
+  background: #ff9640;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  height: 250px;
+  align-self: flex-end; /* this item will be set at the end of the cross axis */
+}
+
+
+
+/* 207 */
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  height: 1300px;
+  display: flex;
+  flex-direction: row  ;
+  flex-wrap: nowrap;
+  /* flex-flow: row wrap; */
+  align-items: center;
+  justify-content: flex-start;
+}
+
+
+.item-1 {
+  background: #ff7300;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+}
+
+.item-2 {
+  background: #ff9640;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 250px;
+  font-size: 1.8rem;
+}
+
+.item-3 {
+  background: #ff9640;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  height: 250px;
+}
+
+.item-4 {
+  background: #f5c096;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 300px;
+  height: 300px;
+}
+
+.item-5 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+  flex-grow: 1; /* the flex-item-5 will complete the empty space after those 350px with 1 part of it\s left space 
+  in case that flex-wrap of the flex-container is flex-wrap: wrap, it will take the whole space of the next row*/
+}
+
+.item-6 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+  flex-grow: 3; /* this flex-item-6 will complete the empty space after those 350px with 3 parts of the left/empty space */
+}
+
+
+
+/* 208 */
+
+.item-5 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+  flex-shrink: 1; /* the default value of the flex-shrink */
+}
+
+
+.item-5 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+  flex-shrink: 0; /* this element will not shrink */
+}
+
+
+
+.flex-container {
+  background: white;
+  padding: 10px;
+  border: 5px solid black;
+  height: 1300px;
+  display: flex;
+  flex-direction: row  ;
+  flex-wrap: nowrap;
+  /* flex-flow: row wrap; */
+  align-items: center;
+  justify-content: flex-start;
+}
+
+
+.item-1 {
+  background: #ff7300;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+}
+
+.item-2 {
+  background: #ff9640;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 250px;
+  font-size: 1.8rem;
+}
+
+.item-3 {
+  background: #ff9640;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  height: 250px;
+}
+
+.item-4 {
+  background: #f5c096;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 300px;
+  height: 300px;
+}
+
+.item-5 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+  flex-shrink: 1; 
+}
+
+.item-6 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+  flex-shrink: 4; /* this element will shrink 4 times more than another one */
+}
+
+
+/* 209 */
+/* flex-basis it's the width or the height depending on the main axis, so flex-basis goes along with the main axis */
+
+.item-5 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+  flex-basis: 300px; /* this flex-basis will overwrite the width if the flex-direction: row */
+}
+
+.item-5 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+  height: 200px;
+  flex-basis: 300px; /* this flex-basis will overwrite the width if the flex-direction: row */
+}
+
+.item-5 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+  flex-basis: 300px; /* this flex-basis will overwrite the height if the flex-direction: column */
+}
+
+.item-5 {
+  background: #d3c0b1;
+  color: white;
+  padding: 10px;
+  border: 5px solid black;
+  margin: 10px;
+  width: 350px;
+  flex-basis: 20%; /* this will be 20% from the entire width of the page or parent not sure */
+}
+
+
+  /* 214 */
+  /* Older version of IE will not support CSS grid */
+
+
+  /* 215 */
+/* A better tool for debugging CSS grid is Mozilla Firefox */
+
+
+.container {
+  margin: 20px;
+  display: grid;
+} /* here we'll have a grid for all the element which are in this container, by default we will have row's for each direct children of the container, with only one column(this is the default behaviour) */
+
+
+/* 216 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  grid-template-columns: 200px 2fr 20% 1fr; /* here we have defined our columns, first column has 200px, third one has 20% of the entire width, the second one has 2 parts(fractions) of the space left and the forth has 1 part(fraction) of the space left */
+  grid-template-rows: 5rem 2.5rem; /* here we have defined our rows, first has the height of 5rem and the second row has the height of 2.5rem */
+}
+
+
+/* 217 */
+/* By default the element are positioned in the grid from left to right on to the second row and so on again*/
+.container {
+  margin: 20px;
+  display: grid;
+  grid-template-columns: 200px 2fr 20% 1fr;
+  grid-template-rows: 5rem 2.5rem;    
+}
+
+.el1 {
+  background: rgba(255, 154, 72, 0.5);
+}
+
+.el2 {
+  background: rgba(255, 0, 0, 0.5);
+}
+
+.el3 {
+  background: rgba(0, 128, 0, 0.5);
+  grid-column-start: 3; /* the .el3 element start at the line 3 of columns */
+  grid-column-end: 5; /* and end at the line 5 of the columns */
+  grid-row-start: 1; /* the .el3 element start at the line 1 of the rows */
+  grid-row-end: 3; /* and ends at the line 3 of the rows */
+}                      /* everything inside of these limits are the actual element */
+                     /* see the MOZILLA deloper tools to understand it */
+.el4 {
+  background: rgba(0, 4, 255, 0.5);
+}
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  grid-template-columns: 200px 5rem 20% auto; /* first column will have 200px, second column will have 5rem, thrid column will have 20% of the entire width, and the fourth will have all the left space */
+  grid-template-rows: 5rem auto; /* the first row will have the height of 5 rem and the second row will have all the left space till the height of 500px of the .container, if the .container doesn't has a defined height, the height of the second row will be as high as the content inside it is  */
+}
+
+
+/* 218 */
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns: 25% 25% 25% 25%; /* in this case all 4 columns will take a quarter of the width */
+  grid-template-rows: 5rem auto;    
+}
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns: repeat(4, 25%); /* in this case the columns size will be the same as one above, but 4 means how many times the 25%(in this case should be repeated) and in this way we do it quickly and easier and the parameter could be rem, pixels, fractions, mixed values, we can have more than one parameter there */
+  grid-template-rows: 5rem auto;    
+}
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 200px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns: repeat(4, 25%);
+  grid-template-rows: 5rem minmax(10px, 200px) 100px; /* the minimum height of the second row will be 10px in this case and the maximum height it will be 200px if have enough space, if not it will take something in between */
+}
+
+
+/* 219 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns: repeat(4, 25%);
+  grid-template-rows: 5rem minmax(10px, auto) 100px;
+}
+
+.el1 {
+  background: rgba(255, 154, 72, 0.5);
+}
+
+.el2 {
+  background: rgba(255, 0, 0, 0.5);
+  grid-column-start: 1;
+  grid-column-end: -1; /* these means that the element will take the entire width of all columns on that row */
+  grid-row-start: 2;
+  grid-row-end: span 1; /
+  z-index: 10;
+}
+
+.el3 {
+  background: rgba(0, 128, 0, 0.5);
+  grid-column-start: 2;
+  grid-column-end: span 3; /* this means that the column start at line 2 and will end or span 3 columns*/  
+  grid-row-start: 1;  
+  grid-row-end: 3;
+}
+
+/* In this way we can possition the elements one above the other, if we don't specify the z-index, on the top will the last which we wroted in the code, "the last one" */ 
+
+.el4 {
+  background: rgba(0, 4, 255, 0.5);
+}
+
+
+
+/* 220 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns: repeat(4, 25%);
+  grid-template-rows: [row-1-start] 5rem [row-1-end row-2-start] minmax(10px, auto) [row-2-end row-3-start] 100px [row-3-end]; /* in here we named the line as we wanted, but one thing which we have to do it is that we have to put the names between square brackets [name] and we have to put it before the value, also we can name one line with two names but it has to be on the same square brackets as above*/
+}
+
+.el1 {
+  background: rgba(255, 154, 72, 0.5);
+}
+
+.el2 {
+  background: rgba(255, 0, 0, 0.5);
+  grid-column-start: 1;
+  grid-column-end: -1;
+  grid-row-start: row-2-start;
+  grid-row-end: span 1;
+  z-index: 10;
+}
+
+.el3 {
+  background: rgba(0, 128, 0, 0.5);
+  grid-column-start: 2;
+  grid-column-end: span 3; 
+  grid-row-start: row-1-start; /* here we used the names which we named the lines */
+  grid-row-end: row-2-end;
+}
+
+.el4 {
+  background: rgba(0, 4, 255, 0.5);
+}
+
+
+
+
+/* 221 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns: repeat(4, 25%);
+  grid-template-rows: [row-1-start] 5rem [row-1-end row-2-start] minmax(10px, auto) [row-2-end row-3-start] 100px [row-3-end];
+}
+
+.el1 {
+  background: rgba(255, 154, 72, 0.5);
+}
+
+.el2 {
+  background: rgba(255, 0, 0, 0.5);
+  /* grid-column-start: 1;
+  grid-column-end: -1; */
+  grid-column: 1 / -1; /* this is the grid-column shorthand first value is where is start and the second where it's end */
+  /* grid-row-start: row-2-start;
+  grid-row-end: span 1; */
+  grid-row: row-2-start / span 1; /* here also a shorthand but grid-row */
+  z-index: 10;
+}
+
+.el3 {
+  background: rgba(0, 128, 0, 0.5);
+  /* grid-column-start: 2;
+  grid-column-end: span 3; 
+  grid-row-start: row-1-start;
+  grid-row-end: row-2-end; */
+  grid-area: row-1-start / 2 / row-2-end / span 3; /* here is the grid-area which is a shorthand which contains grid-column and grid-row, first value is grid-row-start, second is grid-column-start, third value is grid-row-end and the last value is the grid-column-end */
+}
+
+.el4 {
+  background: rgba(0, 4, 255, 0.5);
+}
+
+
+/* 222 */ 
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns: repeat(4, 25%);
+  grid-template-rows: [row-1-start] 5rem [row-1-end row-2-start] minmax(10px, auto) [row-2-end row-3-start] 100px [row-3-end];
+  grid-column-gap: 20px; /* this will be the size of lines between columns */
+  grid-row-gap: 10px; /* this will be the size of lines between rows */
+  grid-gap: 10px 20px; /* this is the shorthand for grid-row-gap and grid-column-gap, far value is for grid-row-gap and second value is for grid-column-gap */
+  grid-gap: 10px; /* if we have define just one value, this value will be applied for grid-row-gap and for grid-column-gap */
+}
+
+
+
+/* 223 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns: repeat(4, 25%);
+  grid-template-rows: [row-1-start] 5rem [row-1-end row-2-start] minmax(10px, auto) [row-2-end row-3-start] 100px [row-3-end];
+  /* grid-column-gap: 20px;
+  grid-row-gap: 10px; */
+  grid-gap: 10px 20px;
+  grid-gap: 10px;
+  grid-template-areas: "header header header header" 
+                       ". . main main" 
+                       "footer footer footer footer";  /* in this way we can define our layout of our grid grid, we 
+                       should have areas as many cells we have in the grid each */
+}
+
+.el1 {
+  background: rgba(255, 154, 72, 0.5);
+}
+
+.el2 {
+  background: rgba(255, 0, 0, 0.5);
+  /* grid-column-start: 1;
+  grid-column-end: -1; */
+  /* grid-column: 1 / -1; */
+  /* grid-row-start: row-2-start;
+  grid-row-end: span 1; */
+  /* grid-row: row-2-start / span 1; */
+  z-index: 10;
+  grid-area: main;
+}
+
+.el3 {
+  background: rgba(0, 128, 0, 0.5);
+  /* grid-column-start: 2;
+  grid-column-end: span 3; 
+  grid-row-start: row-1-start;
+  grid-row-end: row-2-end; */
+  grid-area: header; /* here we define that this element will go in the "header" area in this case */
+}
+
+.el4 {
+  background: rgba(0, 4, 255, 0.5);
+  grid-area: footer; /* here we define that this element will go in the "footer" area in this case */
+}
+
+
+
+/* 224 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns: repeat(4, [col-start] 25% [col-end]);
+  grid-template-rows: [row-start] 5rem [row-end row-2-start] minmax(10px, auto) [row-2-end row-3-start] 100px [row-3-end];
+  /* grid-column-gap: 20px;
+  grid-row-gap: 10px; */
+  grid-gap: 10px 20px;
+  grid-gap: 10px;
+  grid-template-areas: "header header header header" 
+                       ". . main main"
+                       "footer footer footer footer";
+}
+
+.el1 {
+  background: rgba(255, 154, 72, 0.5);
+  grid-column: col-start 2 / col-end 2; /* even if you don't specify the column because we have a repeat function there we still can used it like here */
+}
+
+.el2 {
+  background: rgba(255, 0, 0, 0.5);
+  /* grid-column-start: 1;
+  grid-column-end: -1; */
+  /* grid-column: 1 / -1; */
+  /* grid-row-start: row-2-start;
+  grid-row-end: span 1; */
+  /* grid-row: row-2-start / span 1; */
+  z-index: 10;
+  grid-area: main;
+}
+
+.el3 {
+  background: rgba(0, 128, 0, 0.5);
+  /* grid-column-start: 2;
+  grid-column-end: span 3; 
+  grid-row-start: row-1-start;
+  grid-row-end: row-2-end; */
+  grid-area: hd;
+}
+
+.el4 {
+  background: rgba(0, 4, 255, 0.5);
+  grid-area: footer;
+}
+
+
+
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns:[hd-start] repeat(4, [col-start] 25% [col-end]) [hd-end]; /* we generated an area "hd" */
+  grid-template-rows: [hd-start] 5rem [hd-end row-2-start] minmax(10px, auto) [row-2-end row-3-start] 100px [row-3-end]; /* here we can see it */
+  /* grid-column-gap: 20px;
+  grid-row-gap: 10px; */
+  grid-gap: 10px 20px;
+  grid-gap: 10px;
+  grid-template-areas: "header header header header" 
+                       ". . main main"
+                       "footer footer footer footer";
+}
+
+.el1 {
+  background: rgba(255, 154, 72, 0.5);
+  grid-column: col-start 2 / col-end 2;
+}
+
+.el2 {
+  background: rgba(255, 0, 0, 0.5);
+  /* grid-column-start: 1;
+  grid-column-end: -1; */
+  /* grid-column: 1 / -1; */
+  /* grid-row-start: row-2-start;
+  grid-row-end: span 1; */
+  /* grid-row: row-2-start / span 1; */
+  z-index: 10;
+  grid-area: main;
+}
+
+.el3 {
+  background: rgba(0, 128, 0, 0.5);
+  /* grid-column-start: 2;
+  grid-column-end: span 3; 
+  grid-row-start: row-1-start;
+  grid-row-end: row-2-end; */
+  grid-area: hd; /* and we used the are which we were generated  here */
+}
+
+.el4 {
+  background: rgba(0, 4, 255, 0.5);
+  grid-area: footer;
+}
+
+
+/* 225 */
+/* all the elements in the DOM which are not display: static, don't make part of the grid */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  font-family: "Montserrat", sans-serif;
+  margin: 0;
+  display: grid;
+  grid-template-rows: auto 8rem;
+  padding-top: 3.5rem;
+  height: 100%
+}
+
+main {
+  /* min-height: calc(100vh - 3.5rem - 8rem); */
+  margin-top: 3.5rem;
+}
+/* in this way we can keep the footer at the bottom of the page all the time */
+
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  font-family: "Montserrat", sans-serif;
+  margin: 0;
+  display: grid;
+  grid-template-rows: 3.5rem auto 8rem;
+  grid-template-areas: "header"
+                       "main"
+                       "footer";
+  /* padding-top: 3.5rem; */
+  height: 100%
+}
+
+main {
+  /* min-height: calc(100vh - 3.5rem - 8rem); */
+  margin-top: 3.5rem;
+  /* grid-row: 2 / 3; */
+  grid-area: main;
+}
+
+
+.main-footer {
+  background: black;
+  padding: 2rem;
+  margin-top: 3rem;
+  /* grid-row: 3 / 4; */
+  grid-area: footer;
+}
+
+
+/* maybe the example above is the easiest way to keep the footer at the bottom of the page with CSS grid */
+
+
+
+/* 226 */
+
+body {
+  font-family: "Montserrat", sans-serif;
+  margin: 0;
+  display: grid;
+  grid-template-rows: 3.5rem auto fit-content(8rem); /* it will give the space for the footer in this case, less or more how it need it */
+  grid-template-areas: "header"
+                       "main"
+                       "footer";
+  /* padding-top: 3.5rem; */
+  height: 100%
+}
+
+
+
+/* 227 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns:[hd-start] repeat(4, [col-start] 25% [col-end]) [hd-end];
+  grid-template-rows: [hd-start] 5rem [hd-end row-2-start] minmax(10px, auto) [row-2-end row-3-start] 100px [row-3-end];
+  /* grid-column-gap: 20px;
+  grid-row-gap: 10px; */
+  grid-gap: 10px 20px;
+  grid-gap: 10px;
+  grid-template-areas: "header header header header" 
+                       ". . main main"
+                       "footer footer footer footer";
+  justify-items: center; /* it position the element in their 'center' of their area (in this case) */
+}                start; /* it position the element at the start of their area (in this case) */
+                 end; /* it position the element at the end of their area (in this case) */
+                 stretch; /* this is the default behaviour and you don't have to set it up */
+/* this is the positionating on the rows */
+
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 500px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns:[hd-start] repeat(4, [col-start] 25% [col-end]) [hd-end];
+  grid-template-rows: [hd-start] 5rem [hd-end row-2-start] minmax(10px, auto) [row-2-end row-3-start] 100px [row-3-end];
+  /* grid-column-gap: 20px;
+  grid-row-gap: 10px; */
+  grid-gap: 10px 20px;
+  grid-gap: 10px;
+  grid-template-areas: "header header header header" 
+                       ". . main main"
+                       "footer footer footer footer";
+  justify-items: stretch;
+  align-items: center; /* same as justify-items but on the column, not on the row */
+}              start;
+               end;
+               stretch;
+
+
+
+/* 228 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 800px;
+  width: 800px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns:[hd-start] repeat(4, [col-start] 20% [col-end]) [hd-end];
+  grid-template-rows: [hd-start] 5rem [hd-end row-2-start] minmax(10px, 20rem) [row-2-end row-3-start] 100px [row-3-end];
+  /* grid-column-gap: 20px;
+  grid-row-gap: 10px; */
+  grid-gap: 10px 20px;
+  grid-gap: 10px;
+  grid-template-areas: "header header header header" 
+                       ". . main main"
+                       "footer footer footer footer";
+  justify-items: stretch;
+  align-items: stretch;
+  justify-content: center; /* will positionated the whole grid on the x axis */
+  align-content: center; /* will positionated the whole grid on the y axis */
+  /* as we can see the elements don't fill the entire width and height of the grid */
+}
+
+
+/* 229 */
+
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 800px;
+  width: 800px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns:[hd-start] repeat(4, [col-start] 20% [col-end]) [hd-end];
+  grid-template-rows: [hd-start] 5rem [hd-end row-2-start] minmax(10px, 20rem) [row-2-end row-3-start] 100px [row-3-end];
+  /* grid-column-gap: 20px;
+  grid-row-gap: 10px; */
+  grid-gap: 10px 20px;
+  grid-gap: 10px;
+  grid-template-areas: "header header header header" 
+                       ". . main main"
+                       "footer footer footer footer";
+  justify-items: stretch;
+  align-items: stretch;
+  justify-content: center;
+  align-content: end;
+}
+
+.el1 {
+  background: rgba(255, 154, 72, 0.5);
+  grid-column: col-start 2 / col-end 2;
+}
+
+.el2 {
+  background: rgba(255, 0, 0, 0.5);
+  /* grid-column-start: 1;
+  grid-column-end: -1; */
+  /* grid-column: 1 / -1; */
+  /* grid-row-start: row-2-start;
+  grid-row-end: span 1; */
+  /* grid-row: row-2-start / span 1; */
+  z-index: 10;
+  grid-area: main;
+  justify-self: center; /* here we position only this element on the x axis at the "center" of this area */
+  align-self: center; /* here we position only this element on the y axis at the "center" of this area */
+}
+
+.el3 {
+  background: rgba(0, 128, 0, 0.5);
+  /* grid-column-start: 2;
+  grid-column-end: span 3; 
+  grid-row-start: row-1-start;
+  grid-row-end: row-2-end; */
+  grid-area: hd;
+}
+
+.el4 {
+  background: rgba(0, 4, 255, 0.5);
+  grid-area: footer;
+}
+
+
+/* 230 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  height: 800px;
+  /* grid-template-columns: 200px 5rem 20% auto; */
+  grid-template-columns:[hd-start] repeat(4, [col-start] 20% [col-end]) [hd-end];
+  grid-template-rows: [hd-start] 5rem [hd-end row-2-start] minmax(10px, 20rem) [row-2-end row-3-start] 100px [row-3-end];
+  /* grid-column-gap: 20px;
+  grid-row-gap: 10px; */
+  grid-gap: 10px;
+  grid-template-areas: "header header header header" 
+                       ". side main main"
+                       "footer footer footer footer";
+  justify-items: stretch;
+  align-items: stretch;
+}
+
+@media (max-width: 40rem) {
+  .container {
+  grid-template-rows: [hd-start] 5rem [hd-end row-2-start] minmax(10px, 20rem) [row-2-end row-3-start] 150px [row-3-end] [row-4-start] 100px [row-4-end]; /*we add a fourth row for responsive mobile size */
+  grid-template-areas: "header header header header" 
+                       "main main main main" /* main occupies the whole second row */
+                       "side side side side"   /* side occupies the whole second row */
+                       "footer footer footer footer";
+  }
+}
+
+.el1 {
+  background: rgba(255, 154, 72, 0.5);
+  /* grid-column: col-start 2 / col-end 2; */
+  grid-area: side;
+}
+
+.el2 {
+  background: rgba(255, 0, 0, 0.5);
+  /* grid-column-start: 1;
+  grid-column-end: -1; */
+  /* grid-column: 1 / -1; */
+  /* grid-row-start: row-2-start;
+  grid-row-end: span 1; */
+  /* grid-row: row-2-start / span 1; */
+  z-index: 10;
+  grid-area: main;
+}
+
+.el3 {
+  background: rgba(0, 128, 0, 0.5);
+  /* grid-column-start: 2;
+  grid-column-end: span 3; 
+  grid-row-start: row-1-start;
+  grid-row-end: row-2-end; */
+  grid-area: hd;
+}
+
+.el4 {
+  background: rgba(0, 4, 255, 0.5);
+  grid-area: footer;
+}
+
+
+/* 231 */
+/* as we know all the direct children of a parent which has the display: grid will generate a row for each of these elements even if we don't defined the rows and the size of these row will be as be as content inside them */
+.container {
+  margin: 20px;
+  display: grid;
+  grid-template-columns:repeat(2, 15rem);
+  justify-content: center;
+  grid-gap: 1.5rem;
+  grid-auto-rows: 12rem; /* with this property we can define the size of the auto-generatad rows */
+}
+
+.container {
+  margin: 20px;
+  display: grid;
+  grid-template-columns:repeat(2, 15rem);
+  justify-content: center;
+  grid-gap: 1.5rem;
+  grid-auto-rows: minmax(8rem, auto); /* with this property we can define the size of the auto-generatad rows */
+}
+
+
+
+.container {
+  margin: 20px;
+  display: grid;
+  grid-template-columns:repeat(2, 15rem);
+  justify-content: center;
+  grid-gap: 1.5rem;
+  grid-auto-rows: minmax(8rem, auto);
+  grid-auto-flow: column; /* the default value of property grid-auto-flow: row; */
+  grid-auto-columns: 5rem; /* with the last two properties you can manage the columns auto-generated sizes (usually we don't use them I guess*/
+}
+
+.container {
+  margin: 20px;
+  display: grid;
+  grid-template-columns:repeat(2, 15rem);
+  justify-content: center;
+  grid-gap: 1.5rem;
+  grid-auto-rows: minmax(8rem, auto);
+  grid-auto-flow: row;
+  grid-auto-columns: 5rem;
+}
+
+
+
+/* 232 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  grid-template-columns:repeat(2, 15rem); /* this is the explicit grid defined */
+  grid-template-rows: 20rem; /* explicit grid defined */   /* what is auto-generated is implicit grid defined */
+  justify-content: center;
+  grid-gap: 1.5rem;
+  grid-auto-rows: minmax(8rem, auto);
+  grid-auto-flow: row;
+  grid-auto-columns: 5rem;
+}
+
+/* 233 */ 
+
+.container {
+  margin: 20px;
+  display: grid;
+  grid-template-columns:repeat(auto-fill, 10rem); /* this will "generate" as many columns with actual element in the grid until it will fill the row */ 
+  grid-template-rows: 20rem;
+  justify-content: center;
+  grid-gap: 1.5rem;
+  grid-auto-rows: minmax(8rem, auto);
+  grid-auto-flow: row;
+  grid-auto-columns: 5rem;
+}
+
+.container {
+  margin: 20px;
+  display: grid;
+  grid-template-columns:repeat(auto-fit , 10rem); /* it will fit the elements on the row in any breakpoint (this should do) */
+  grid-template-rows: 20rem;
+  justify-content: center;
+  grid-gap: 1.5rem;
+  grid-auto-rows: minmax(8rem, auto);
+  grid-auto-flow: row;
+  grid-auto-columns: 5rem;
+}
+
+
+/* 234 */
+
+.container {
+  margin: 20px;
+  display: grid;
+  grid-template-columns:repeat(3, 10rem);
+  grid-template-rows: 20rem;
+  justify-content: center;
+  grid-gap: 1.5rem;
+  grid-auto-rows: minmax(8rem, auto);
+  grid-auto-flow: row dense; /* dense will fill the empty space with the elements( an element) from the grid, if it's mandatory, you can use this, but isn't recomennded  */
+  grid-auto-columns: 5rem;
+}
+
+.quote {
+border: 1px solid #fa923f;
+background: #ffbd87;
+font-family: sans-serif;
+padding: 1rem;
+border-radius: 5px;
+}
+
+.quote:nth-of-type(2) {
+grid-column: span 2;
+}
+
+.quote--featured {
+border: #ff4213; 
+background: #ff9f87;
+grid-column: span 2;
+}
+
+
+
+/* 235 */
+
+
+
+/* 236 */
+
+/* GRID is about rows and columns, and it's used for multiple dimensions*/
+
+/* FLEXBOX is used for one dimension */
+
+
+
+
+
+/* 240 */
+
+.package__badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  font-size: 0.8rem;
+  color: white;
+  background: #ff5454;
+  padding: 0.5rem;
+  transform: rotateZ(45deg); /* transform the element with 45deg of it's center */ 
+}
+
+.package__badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  font-size: 0.8rem;
+  color: white;
+  background: #ff5454;
+  padding: 0.5rem;
+  transform: rotateZ(45deg);
+  transform-origin: left top; /* it move the element to left top ( a bit ) */
+}
+
+.package__badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  font-size: 0.8rem;
+  color: white;
+  background: #ff5454;
+  padding: 0.5rem;
+  transform: rotateZ(45deg) translateX(1rem); /* translateX it moves the element on the X axis */
+  transform-origin: center;
+}
+
+.package__badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  font-size: 0.8rem;
+  color: white;
+  background: #ff5454;
+  padding: 0.5rem;
+  transform: rotateZ(45deg) translateX(2rem) translateY(-1rem); /* translateY it moves the element on the Y axis */
+  transform-origin: center;
+  width: 12rem;
+  text-align: center;
+}
+
+
+.package {
+  width: 80%;
+  margin: 1rem 0;
+  border: 4px solid #0e4f1f;
+  border-left: none;
+  position: relative;
+  overflow: hidden; /* any element that goes beyond the .package boundries will be cropped */
+}
+
+
+/* 243 */
+
+/* skewX()_ is the same with skew() */
+
+.testimonial__image-container {
+  width: 100%;
+  max-width: 40rem;
+  box-shadow: 3px 3px 5px 3px rgba(0,0,0,0.3);
+  transform: skewX(20deg); /* this will skew the container and the image inside it with 20deg on the X axis */
+}  
+
+
+.testimonial__image-container {
+  width: 100%;
+  max-width: 40rem;
+  box-shadow: 3px 3px 5px 3px rgba(0,0,0,0.3);
+  transform: skewY(20deg); /* this will skew the container and the image inside it with 20deg on the Y axis */
+
+}
+
+
+
+.testimonial__image-container {
+  width: 100%;
+  max-width: 40rem;
+  box-shadow: 3px 3px 5px 3px rgba(0,0,0,0.3);
+  transform: skew(20deg);
+}
+
+.testimonial__image {
+  width: 100%;
+  vertical-align: top;
+  transform: skew(-20deg); /* in this way the image from the container will not get skewed */
+}
+
+
+
+
+.testimonial__image-container {
+  width: 60%;
+  max-width: 40rem;
+  box-shadow: 3px 3px 5px 3px rgba(0,0,0,0.3);
+  transform: skew(20deg);
+  overflow: hidden;
+}
+
+.testimonial__image {
+  width: 100%;
+  vertical-align: top;
+  transform: skew(-20deg) scale(1.4); /* scale will increse the "zoom" like this is 1.4 on X axis and Y axis */
+}
+
+
+/* 244 */
+
+transform: rotateZ(45deg) translateX(3.5rem) translateY(-1rem);
+/* we can use simple rotate() instead of rotateZ */
+transform: rotate(45deg) translateX(3.5rem) translateY(-1rem);
+
+
+transform: rotateZ(45deg) translateX(3.5rem) translateY(-1rem);
+/* we can use simple translate(x, y) instead of translateX() and translateY() */
+transform: rotate(45deg) translate(3.5rem, -1rem);
+
+
+
+/* 245 */
+
+/* 246 */
+.box {
+  background: red;
+  width: 100%;
+  height: 100%;
+  transform: perspective(1000px) rotateX(0deg) rotateY(80deg); /* perspective(1000) if the value is bigger, you see the element from far, if value is low you see the elemenet very near by, maybe inside and it's give you a 3D look*/
+  color: white;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+
+.container {
+  margin: 150px auto;
+  border: 1px solid black;
+  width: 200px;
+  height: 200px;
+  perspective: 1000px; /* if we use perspective property, then we have to used on the parent, and all the children we'll see from a pespective view */
+}
+
+/* if we use perseptive function, then all the elements will have it's own perspective, even they stay near each other */
+
+.box {
+  background: red;
+  width: 100%;
+  height: 100%;
+  transform: rotateX(0deg) rotateY(80deg);
+  color: white;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+
+.container {
+  margin: 150px auto;
+  border: 1px solid black;
+  width: 200px;
+  height: 200px;
+  perspective: 1000px;
+  perspective-origin: 500px; /* here we can control the pespective-origin: left, center(default) and right, and pixels and so on*/
+} 
+
+.box {
+  background: red;
+  width: 100%;
+  height: 100%;
+  transform: rotateX(30deg) rotateY(80deg) rotateZ(30deg);
+  color: white;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+
+
+/* 147 */
+
+.container {
+  position: relative;
+  margin: 150px auto;
+  border: 1px solid black;
+  width: 200px;
+  height: 200px;
+  perspective: 1000px;
+  perspective-origin: 500px; /* here we have perspective-origin: 500px */
+}
+
+.box1 {
+  position: absolute;
+  background: red;
+  width: 100%;
+  height: 100%;
+  transform: rotateY(80deg);
+  color: white;
+  font-family: sans-serif;
+  text-align: center; 
+}
+
+.box2 {
+  position: absolute;
+  background: blue;
+  width: 100%;
+  height: 100%;
+  transform: translateX(1rem) translateZ(-100rem); /* the blue-box will be out of the container on the right of it */
+  color: white;
+  font-family: sans-serif;
+  text-align: center; 
+}
+
+
+
+
+/* 248 */
+
+.container {
+  position: relative;
+  margin: 150px auto;
+  border: 1px solid black;
+  width: 200px;
+  height: 200px;
+  perspective: 1000px;
+  perspective-origin: 500px;
+  transform: rotateY(130deg);
+  transform-style: preserve-3d;
+}
+
+.box1 {
+  position: absolute;
+  background: red;
+  width: 100%;
+  height: 100%;
+  transform: rotateY(80deg);
+  color: white;
+  font-family: sans-serif;
+  text-align: center; 
+  z-index: 1;
+}
+
+.box2 {
+  position: absolute;
+  background: blue;
+  width: 100%;
+  height: 100%;
+  transform: translateX(1rem) translateZ(-10rem);
+  color: white;
+  font-family: sans-serif;
+  text-align: center; 
+}
+
+
+/* 249 */
+
+.box1 {
+  position: absolute;
+  background: red;
+  width: 100%;
+  height: 100%;
+  transform: rotateY(80deg);
+  color: white;
+  font-family: sans-serif;
+  text-align: center; 
+  z-index: 1;
+  backface-visibility: visible; /* hidden */
+}
+
+
+
+/* 253 */
+
+.modal {
+  position: fixed;
+  opacity: 0; /* we make the element to disapair */
+  transform: translateY(-3rem); /* and will translate it out of the document flow */
+  transition: opacity 200ms ease-out, transform 500ms ease-out; /* here we give it the transition, first will change the opacity which will take 200ms and after that will transition the tranform which will take 500ms */
+  z-index: 200;
+  top: 20%;
+  left: 30%;
+  width: 40%;
+  background: white;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+.open {
+  display: block !important;
+  opacity: 1 !important;   /*here is how the initial element will be displayed */
+  transform: translate(0) !important; /* here is how the initial element will be translate to the actual position */
+}
+
+
+/* 255 */
+
+.modal {
+  position: fixed;
+  opacity: 0;
+  transform: translateY(-3rem);
+  transition: opacity 200ms ease-out, transform 500ms cubic-bezier(0.55, 0.055, 0.675, 0.19); /* https://easings.net/ */
+  z-index: 200; 
+  top: 20%;
+  left: 30%;
+  width: 40%;
+  background: white;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+
+/* 256 */
+
+For display propertis with transitions watch the video again 
+
+
+/* 257 */
+
+@keyframes wiggle {
+  from {
+    transform: rotateZ(-10deg);
+  }
+  to {
+    transform: rotateZ(10deg);
+  }
+}
+
+
+.main-nav__item--cta {
+  animation: wiggle 200ms 3s 8 none;  /* each transformation will take 200ms, the animation will start after 3 seconds and it will happen 8 times */
+}
+
+
+/* 259 */
+
+@keyframes wiggle {
+  0% {
+    transform: rotateZ(0);
+  }
+  50% {
+    transform: rotateZ(-10deg);
+  }
+  100% {
+    transform: rotateZ(10deg);
+  }
+}
+
+.main-nav__item--cta {
+  animation: wiggle 400ms 3s 8 ease-out none;
+}
+
+
+
+/* 260 */
+
+@keyframes flip-customer {
+  0% {
+    transform: rotateY(0) skew(20deg);
+  }
+  50% {
+    transform: rotateY(160deg) skew(20deg);
+  }
+  100% {
+    transform: rotateY(360deg) skew(20deg);
+  }
+}
+
+#customer-1:hover .testimonial__image-container {
+  animation: flip-customer 1s ease-out forwards;
+}
+
+
+
+/* 261 */
+
+var ctaButton = document.querySelector(".main-nav__item--cta");
+
+ctaButton.addEventListener('animationstart', function(event){
+  console.log('Animation started', event)
+})
+
+ctaButton.addEventListener('animationend', function(event){
+  console.log('Animation ended', event)
+})
+
+ctaButton.addEventListener('animationiteration', function(event){
+  console.log('Animation iteration', event)
+})
+
+
+
+/* 266 */
+
+:root {
+  --dark-green: #0e4f1f; /* here we defined our variables and we can named them as we want */
+  --highlight-color: #ff1b68;
+}
+
+.main-nav__item--cta a,
+.mobile-nav__item--cta a {
+  color: white;
+  background:  var(--highlight-color, #ff1b68); /* here we use our variable, after the comma there is the color in case that CSS variable isn't vorking for that browser */
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+.button {
+  background: var(--dark-green, #0e4f1f);
+  color: white;
+  font: inherit;
+  border: 1.5px solid var(--dark-green);
+  padding: 0.5rem;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+
+/* 267 */
+
+.main-header {
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: #2ddf5c;
+  padding: 0.5rem 1rem;
+  z-index: 60;
+  display: -webkit-box; /* in some older version of the browsers display: flex; isn't working as we aspected so here are the vendor prefixes for it */
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex; /* we put this property at last because it will overwrite in case we have a browser that recognise flex property, and in case it didn't it will match one of the properties above */
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+/* 268 */
+
+VERY INTERESTING VIDEO 
+
+
+/* 269 */
+
+body {
+  font-family: "Montserrat", sans-serif;
+  margin: 0;
+  padding-top: 3.5rem;
+}
+
+@supports (display: grid){  /* this will apply just if the display: grid; is supported by the browser, the we can combine the querry with or, not, and (check the end of the video to find more about it  */
+  body {
+    display: grid;
+    grid-template-rows: 3.5rem auto fit-content(8rem);
+    grid-template-areas: "header"
+                         "main"
+                         "footer";
+    padding-top: 0;
+    height: 100%;
+  }
+}
+
+
+/* 270 */ 
+Polyfills
+
+
+/* 271 */
+Normalize.css /* reset-library, but the user will have to download more information than */
+
+ 
+
+/* 272 */
+Choosing Class Name Correctly
+
+
+
+/* 273 */
+VANILLA CSS VS CSS Frameworks 
+
+
+
+
+/* 277 */
+
+
+SASS - Syntactically Awesome Style Sheets /* does not run in the browser, extend CSS(duting development, should be complile to CSS before production*/
+/* In order to use SASS you need to install it */
+
+
+/* 280 */
+
+SASS works without braces and semicolons instead is working with indentation;
+SCSS keeps the semicolons and the braces/* I think this is the difference between SASS and SCSS */
+
+/* We have to compile our .scss file to .css in order to work, for that we have to use this command line:
+sass main.scss main.css  - from the folder where files are;
+
+
+sass main.scss main.css  - this command is watching in our .scss file to see if there are any changer and it will automate compile the changes into .css file */
+
+
+/* we actually to write all the code from .css to .scss and in the .scss to make the changes we want */
+
+
+.documentation-links {  /* here are nesting element as we can see */
+  list-style: none;
+  margin: 1rem 0 0 0;
+  padding: 0;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex;
+  flex-direction: column;
+
+  li {
+    margin: 0.2rem 0;
+    background: white;
+  }
+
+  .documentation-link {
+    text-decoration: none;
+    color: #521751;
+    display: block;
+    padding: 0.2rem;
+    border: 0.05rem solid #521751;
+  }
+
+  .documentation-link:hover,
+  .documentation-link:active {
+  color: white;
+  background: #fa923f;
+  border-color: #fa923f;
+  }
+}
+
+
+/* 281 */
+
+/* CSS code */
+flex-direction: column;
+flex-wrap: nowrap;
+
+/* SCSS code */
+flex: {
+  direction: column;
+  wrap: nowrap; 
+}
+
+
+
+/* 282 */
+
+$main-color: #521751; /* this is a variable in SCSS and we can named how we want, it can store any value we want, we should declared at the beginnig of the SCSS document */
+
+
+/* 283 */
+
+/* List in SCSS */
+/* CSS code */
+border: 0.05rem solid $main-color;
+
+/* SCSS code */
+$border-default: 0.05rem solid $main-color;
+
+
+
+/* Maps in SCSS */
+$colors: (main: #521751, secondary: #fa923f);
+
+$border-default: 0.05rem solid map-get($colors, main);
+
+border-color: map-get($colors, secondary);
+
+
+/* 284 */
+
+background: lighten(map-get($colors, main), 72%); /* it will give you  a lighter color from that map $colors and it will make it with 72% lighter */
+
+
+/* 285 */
+$size-default: 1rem;
+$size-tiny: 0.2rem;
+
+.sass-introduction {
+  border: $border-default;
+  background: lighten(map-get($colors, main), 72%);
+  padding: $size-default * 2;
+  text-align: center;
+  box-shadow: $size-tiny $size-tiny $size-tiny / 2 #ccc;
+  width: 90%;
+  box-sizing: border-box;
+}
+
+
+/* 286 */
+
+/* Partials are very useful cause it allows us to write more .scss documents, a good use is to have a .scss document for variables and so on, in this clip you can see that how many .scss documents we have all we be translated in one main.css( it'a a good use for less HTTP requests )  */
+
+
+
+/* 287 */
+
+/* In SCSS you can embed the @media querries inside the element as below */
+
+html {
+  font-size: 94.75%;
+
+  @media (min-width: 40rem) {
+    font-size: 125%;
+  }
+}
+
+
+.sass-introduction {
+  border: $border-default;
+  background: lighten(map-get($colors, main), 72%);
+  padding: $size-default * 2;
+  text-align: center;
+  box-shadow: $size-tiny $size-tiny $size-tiny / 2 #ccc;
+  width: 90%;
+  box-sizing: border-box;
+
+  @media (min-width: 40rem) {
+    width: 30rem;
+  }
+}
+
+
+
+/* 288 */
+ 
+.sass-section {
+  border: $border-default;
+  background: lighten(map-get($colors, main), 72%);
+  padding: $size-default * 2;
+  text-align: center;
+  width: 90%;
+  box-sizing: border-box;
+  @media (min-width: 40rem) {
+    width: 30rem;
+  }
+}
+
+.sass-introduction {
+  @extend .sass-section;  /* in this way we inherit all the properties from .sass-section to .sass-introduction, without assign the .sass-section to the element in HTML */
+  box-shadow: $size-tiny $size-tiny $size-tiny / 2 #ccc;  
+}
+
+.sass-introduction p {
+  margin: 0;
+}
+
+.sass-details {
+  @extend .sass-section; /* in this way we inherit all the properties from .sass-section to .sass-details, without assign the .sass-section to the element in HTML */
+  margin: 2rem 0;
+}
+
+
+
+/* 289 */
+.container {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+  padding: 3rem 0;
+  box-sizing: border-box; 
+}
+
+.documentation-links {
+  list-style: none;
+  margin: 1rem 0 0 0;
+  padding: 0;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex;
+  flex-direction: column; 
+}
+
+/* if we have 2 selectors that have some of the properties the same we can use @mixin for that like below */
+
+@mixin display-flex() {   /* we have to write the @mixin at the beggining of the document as in the video */
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex;
+}
+
+.container { 
+  @include display-flex(); /* here we @include the @mixin */
+  flex: {
+    direction: column;
+    wrap: nowrap;
+  }
+  align-items: center;
+  padding: $size-default * 3 0;
+  box-sizing: border-box;
+}
+
+.documentation-links {
+  list-style: none;
+  margin: 1rem 0 0 0;
+  padding: 0;
+  @include display-flex(); /* here we @include the  @minix */
+  flex-direction: column;
+}
+
+
+/* 290 */
+
+.documentation-link {
+  text-decoration: none;
+  color: map-get($colors, main);
+  display: block;
+  padding: 0.2rem;
+  border: 0.05rem solid map-get($colors, main);
+
+  :hover, /* not working */
+  :active {
+    color: white;
+    background: map-get($colors, secondary);
+    border-color: map-get($colors, secondary);
+  }
+}
+}
+
+
+.documentation-link {
+  text-decoration: none;
+  color: map-get($colors, main);
+  display: block;
+  padding: 0.2rem;
+  border: 0.05rem solid map-get($colors, main);
+
+  &:hover, /* working see the end of the video for a better understanding */ 
+  &:active {
+    color: white;
+    background: map-get($colors, secondary);
+    border-color: map-get($colors, secondary);
+  }
+}
+}
+
