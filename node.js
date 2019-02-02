@@ -15942,3 +15942,4240 @@ exports.postNewPassword = (req, res, next) => {
       console.log(err);
     });
 };
+
+
+
+
+// 295. Add Validation to Login
+
+const crypto = require('crypto');
+
+const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
+const sendgridTransport = require('nodemailer-sendgrid-transport');
+const { validationResult } = require('express-validator/check');
+
+const User = require('../models/user');
+
+const transporter = nodemailer.createTransport(
+  sendgridTransport({
+    auth: {
+      api_key:
+        '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'
+    }
+  })
+);
+
+exports.getLogin = (req, res, next) => {
+  let message = req.flash('error');
+  if (message.length > 0) {
+    message = message[0];
+  } else {
+    message = null;
+  }
+  res.render('auth/login', {
+    path: '/login',
+    pageTitle: 'Login',
+    errorMessage: message,
+    oldInput: {
+      email: '',
+      password: ''
+    },
+    validationErrors: []
+  });
+};
+
+exports.getSignup = (req, res, next) => {
+  let message = req.flash('error');
+  if (message.length > 0) {
+    message = message[0];
+  } else {
+    message = null;
+  }
+  res.render('auth/signup', {
+    path: '/signup',
+    pageTitle: 'Signup',
+    errorMessage: message,
+    oldInput: {
+      email: '',
+      password: '',
+      confirmPassword: ''
+    },
+    validationErrors: []
+  });
+};
+
+exports.postLogin = (req, res, next) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).render('auth/login', {
+      path: '/login',
+      pageTitle: 'Login',
+      errorMessage: errors.array()[0].msg,
+      oldInput: {
+        email: email,
+        password: password
+      },
+      validationErrors: errors.array()
+    });
+  }
+
+  User.findOne({ email: email })
+    .then(user => {
+      if (!user) {
+        return res.status(422).render('auth/login', {
+          path: '/login',
+          pageTitle: 'Login',
+          errorMessage: 'Invalid email or password.',
+          oldInput: {
+            email: email,
+            password: password
+          },
+          validationErrors: []
+        });
+      }
+      bcrypt
+        .compare(password, user.password)
+        .then(doMatch => {
+          if (doMatch) {
+            req.session.isLoggedIn = true;
+            req.session.user = user;
+            return req.session.save(err => {
+              console.log(err);
+              res.redirect('/');
+            });
+          }
+          return res.status(422).render('auth/login', {
+            path: '/login',
+            pageTitle: 'Login',
+            errorMessage: 'Invalid email or password.',
+            oldInput: {
+              email: email,
+              password: password
+            },
+            validationErrors: []
+          });
+        })
+        .catch(err => {
+          console.log(err);
+          res.redirect('/login');
+        });
+    })
+    .catch(err => console.log(err));
+};
+
+exports.postSignup = (req, res, next) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    console.log(errors.array());
+    return res.status(422).render('auth/signup', {
+      path: '/signup',
+      pageTitle: 'Signup',
+      errorMessage: errors.array()[0].msg,
+      oldInput: {
+        email: email,
+        password: password,
+        confirmPassword: req.body.confirmPassword
+      },
+      validationErrors: errors.array()
+    });
+  }
+
+  bcrypt
+    .hash(password, 12)
+    .then(hashedPassword => {
+      const user = new User({
+        email: email,
+        password: hashedPassword,
+        cart: { items: [] }
+      });
+      return user.save();
+    })
+    .then(result => {
+      res.redirect('/login');
+      // return transporter.sendMail({
+      //   to: email,
+      //   from: 'shop@node-complete.com',
+      //   subject: 'Signup succeeded!',
+      //   html: '<h1>You successfully signed up!</h1>'
+      // });
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
+
+exports.postLogout = (req, res, next) => {
+  req.session.destroy(err => {
+    console.log(err);
+    res.redirect('/');
+  });
+};
+
+exports.getReset = (req, res, next) => {
+  let message = req.flash('error');
+  if (message.length > 0) {
+    message = message[0];
+  } else {
+    message = null;
+  }
+  res.render('auth/reset', {
+    path: '/reset',
+    pageTitle: 'Reset Password',
+    errorMessage: message
+  });
+};
+
+exports.postReset = (req, res, next) => {
+  crypto.randomBytes(32, (err, buffer) => {
+    if (err) {
+      console.log(err);
+      return res.redirect('/reset');
+    }
+    const token = buffer.toString('hex');
+    User.findOne({ email: req.body.email })
+      .then(user => {
+        if (!user) {
+          req.flash('error', 'No account with that email found.');
+          return res.redirect('/reset');
+        }
+        user.resetToken = token;
+        user.resetTokenExpiration = Date.now() + 3600000;
+        return user.save();
+      })
+      .then(result => {
+        res.redirect('/');
+        transporter.sendMail({
+          to: req.body.email,
+          from: 'shop@node-complete.com',
+          subject: 'Password reset',
+          html: `
+            <p>You requested a password reset</p>
+            <p>Click this <a href="http://localhost:3000/reset/${token}">link</a> to set a new password.</p>
+          `
+        });
+      })
+      .catch(err => {
+        console.log(err);
+      });
+  });
+};
+
+exports.getNewPassword = (req, res, next) => {
+  const token = req.params.token;
+  User.findOne({ resetToken: token, resetTokenExpiration: { $gt: Date.now() } })
+    .then(user => {
+      let message = req.flash('error');
+      if (message.length > 0) {
+        message = message[0];
+      } else {
+        message = null;
+      }
+      res.render('auth/new-password', {
+        path: '/new-password',
+        pageTitle: 'New Password',
+        errorMessage: message,
+        userId: user._id.toString(),
+        passwordToken: token
+      });
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
+
+exports.postNewPassword = (req, res, next) => {
+  const newPassword = req.body.password;
+  const userId = req.body.userId;
+  const passwordToken = req.body.passwordToken;
+  let resetUser;
+
+  User.findOne({
+    resetToken: passwordToken,
+    resetTokenExpiration: { $gt: Date.now() },
+    _id: userId
+  })
+    .then(user => {
+      resetUser = user;
+      return bcrypt.hash(newPassword, 12);
+    })
+    .then(hashedPassword => {
+      resetUser.password = hashedPassword;
+      resetUser.resetToken = undefined;
+      resetUser.resetTokenExpiration = undefined;
+      return resetUser.save();
+    })
+    .then(result => {
+      res.redirect('/login');
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
+
+
+// Can't watch the last 2 videos if you want
+
+
+
+
+// 296. Sanitazing Data
+
+// /routes/auth.js
+
+const express = require('express');
+const { check, body } = require('express-validator/check');
+
+const authController = require('../controllers/auth');
+const User = require('../models/user');
+
+const router = express.Router();
+
+router.get('/login', authController.getLogin);
+
+router.get('/signup', authController.getSignup);
+
+router.post(
+  '/login',
+  [
+    body('email')
+      .isEmail()
+      .withMessage('Please enter a valid email address.')
+      .normalizeEmail(), // this will make the email lowercase()
+    body('password', 'Password has to be valid.')
+      .isLength({ min: 5 })
+      .isAlphanumeric()
+      .trim() // here we are trim the password which the user entered
+  ],
+  authController.postLogin
+);
+
+router.post(
+  '/signup',
+  [
+    check('email')
+      .isEmail()
+      .withMessage('Please enter a valid email.')
+      .custom((value, { req }) => {
+        // if (value === 'test@test.com') {
+        //   throw new Error('This email address if forbidden.');
+        // }
+        // return true;
+        return User.findOne({ email: value }).then(userDoc => {
+          if (userDoc) {
+            return Promise.reject(
+              'E-Mail exists already, please pick a different one.'
+            );
+          }
+        });
+      })
+      .normalizeEmail(),
+    body(
+      'password',
+      'Please enter a password with only numbers and text and at least 5 characters.'
+    )
+      .isLength({ min: 5 })
+      .isAlphanumeric()
+      .trim(),
+    body('confirmPassword')
+    .trim()
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+          throw new Error('Passwords have to match!');
+      }
+      return true;
+    })
+  ],
+  authController.postSignup
+);
+
+router.post('/logout', authController.postLogout);
+
+router.get('/reset', authController.getReset);
+
+router.post('/reset', authController.postReset);
+
+router.get('/reset/:token', authController.getNewPassword);
+
+router.post('/new-password', authController.postNewPassword);
+
+module.exports = router;
+
+
+
+
+// 297. Validating Product Addition
+
+
+
+
+// 298. Validating Product Editing
+
+// /routes/admin.js
+
+const path = require('path');
+
+const express = require('express');
+const { body } = require('express-validator/check');
+
+const adminController = require('../controllers/admin');
+const isAuth = require('../middleware/is-auth');
+
+const router = express.Router();
+
+// /admin/add-product => GET
+router.get('/add-product', isAuth, adminController.getAddProduct);
+
+// /admin/products => GET
+router.get('/products', isAuth, adminController.getProducts);
+
+// /admin/add-product => POST
+router.post(
+  '/add-product',
+  [
+    body('title')
+      .isString()
+      .isLength({ min: 3 })
+      .trim(),
+    body('imageUrl').isURL(),
+    body('price').isFloat(),
+    body('description')
+      .isLength({ min: 5, max: 400 })
+      .trim()
+  ],
+  isAuth,
+  adminController.postAddProduct
+);
+
+router.get('/edit-product/:productId', isAuth, adminController.getEditProduct);
+
+router.post(
+  '/edit-product',
+  [
+    body('title')
+      .isString()
+      .isLength({ min: 3 })
+      .trim(),
+    body('imageUrl').isURL(),
+    body('price').isFloat(),
+    body('description')
+      .isLength({ min: 5, max: 400 })
+      .trim()
+  ],
+  isAuth,
+  adminController.postEditProduct
+);
+
+router.post('/delete-product', isAuth, adminController.postDeleteProduct);
+
+module.exports = router;
+
+
+// /controllers/admin.js
+
+const { validationResult } = require('express-validator/check');
+
+const Product = require('../models/product');
+
+exports.getAddProduct = (req, res, next) => {
+  res.render('admin/edit-product', {
+    pageTitle: 'Add Product',
+    path: '/admin/add-product',
+    editing: false,
+    hasError: false,
+    errorMessage: null,
+    validationErrors: []
+  });
+};
+
+exports.postAddProduct = (req, res, next) => {
+  const title = req.body.title;
+  const imageUrl = req.body.imageUrl;
+  const price = req.body.price;
+  const description = req.body.description;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors.array());
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Add Product',
+      path: '/admin/edit-product',
+      editing: false,
+      hasError: true,
+      product: {
+        title: title,
+        imageUrl: imageUrl,
+        price: price,
+        description: description
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  const product = new Product({
+    title: title,
+    price: price,
+    description: description,
+    imageUrl: imageUrl,
+    userId: req.user
+  });
+  product
+    .save()
+    .then(result => {
+      // console.log(result);
+      console.log('Created Product');
+      res.redirect('/admin/products');
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
+
+exports.getEditProduct = (req, res, next) => {
+  const editMode = req.query.edit;
+  if (!editMode) {
+    return res.redirect('/');
+  }
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      if (!product) {
+        return res.redirect('/');
+      }
+      res.render('admin/edit-product', {
+        pageTitle: 'Edit Product',
+        path: '/admin/edit-product',
+        editing: editMode,
+        product: product,
+        hasError: false,
+        errorMessage: null,
+        validationErrors: []
+      });
+    })
+    .catch(err => console.log(err));
+};
+
+exports.postEditProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  const updatedTitle = req.body.title;
+  const updatedPrice = req.body.price;
+  const updatedImageUrl = req.body.imageUrl;
+  const updatedDesc = req.body.description;
+
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Edit Product',
+      path: '/admin/edit-product',
+      editing: true,
+      hasError: true,
+      product: {
+        title: updatedTitle,
+        imageUrl: updatedImageUrl,
+        price: updatedPrice,
+        description: updatedDesc,
+        _id: prodId
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  Product.findById(prodId)
+    .then(product => {
+      if (product.userId.toString() !== req.user._id.toString()) {
+        return res.redirect('/');
+      }
+      product.title = updatedTitle;
+      product.price = updatedPrice;
+      product.description = updatedDesc;
+      product.imageUrl = updatedImageUrl;
+      return product.save().then(result => {
+        console.log('UPDATED PRODUCT!');
+        res.redirect('/admin/products');
+      });
+    })
+    .catch(err => console.log(err));
+};
+
+exports.getProducts = (req, res, next) => {
+  Product.find({ userId: req.user._id })
+    // .select('title price -_id')
+    // .populate('userId', 'name')
+    .then(products => {
+      console.log(products);
+      res.render('admin/products', {
+        prods: products,
+        pageTitle: 'Admin Products',
+        path: '/admin/products'
+      });
+    })
+    .catch(err => console.log(err));
+};
+
+exports.postDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.deleteOne({ _id: prodId, userId: req.user._id })
+    .then(() => {
+      console.log('DESTROYED PRODUCT');
+      res.redirect('/admin/products');
+    })
+    .catch(err => console.log(err));
+};
+
+
+
+
+// 300.
+
+
+
+
+// 303. Analyzing the Error Handling in the Current Project
+
+
+
+
+// 304. Errors - Some Theory
+
+// If we don't handle our errors from the application, the application will just crash  
+
+// error-playground.js
+
+const sum = (a, b) => {
+  if (a && b) {
+    return a + b;
+  }
+  throw new Error('Invalid arguments');
+};
+
+try {
+  console.log(sum(1));
+} catch (error) {
+  console.log('Error occurred!');
+//   console.log(error);
+}
+
+// console.log(sum(1));
+console.log('This works!');
+
+
+
+// 305. Throwing Errors in Code
+
+// app.js
+
+const path = require('path');
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
+const csrf = require('csurf');
+const flash = require('connect-flash');
+
+const errorController = require('./controllers/error');
+const User = require('./models/user');
+
+const MONGODB_URI =
+  'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/shop';
+
+const app = express();
+const store = new MongoDBStore({
+  uri: MONGODB_URI,
+  collection: 'sessions'
+});
+const csrfProtection = csrf();
+
+app.set('view engine', 'ejs');
+app.set('views', 'views');
+
+const adminRoutes = require('./routes/admin');
+const shopRoutes = require('./routes/shop');
+const authRoutes = require('./routes/auth');
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(
+  session({
+    secret: 'my secret',
+    resave: false,
+    saveUninitialized: false,
+    store: store
+  })
+);
+app.use(csrfProtection);
+app.use(flash());
+
+app.use((req, res, next) => {
+  if (!req.session.user) {
+    return next();
+  }
+  User.findById(req.session.user._id)
+    .then(user => {
+      if(!user) { // this  in case that user was delete from the databese
+        return next();
+      }
+      req.user = user;
+      next();
+    })
+    .catch(err => {
+      throw new Error(err); // if we have some tehnical issue(connecting to our database in this case) we are throwing an error, express give us a way to handle this errors, that's why we are doing it like this
+    });
+});
+
+app.use((req, res, next) => {
+  res.locals.isAuthenticated = req.session.isLoggedIn;
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
+
+app.use('/admin', adminRoutes);
+app.use(shopRoutes);
+app.use(authRoutes);
+
+app.use(errorController.get404);
+
+mongoose
+  .connect(MONGODB_URI)
+  .then(result => {
+    app.listen(3000);
+  })
+  .catch(err => {
+    console.log(err);
+  });
+
+
+
+
+// 306. Returning Error Pages  
+
+// /controllers/admin.js
+
+const mongoose = require('mongoose');
+
+const { validationResult } = require('express-validator/check');
+
+const Product = require('../models/product');
+
+exports.getAddProduct = (req, res, next) => {
+  res.render('admin/edit-product', {
+    pageTitle: 'Add Product',
+    path: '/admin/add-product',
+    editing: false,
+    hasError: false,
+    errorMessage: null,
+    validationErrors: []
+  });
+};
+
+exports.postAddProduct = (req, res, next) => {
+  const title = req.body.title;
+  const imageUrl = req.body.imageUrl;
+  const price = req.body.price;
+  const description = req.body.description;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors.array());
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Add Product',
+      path: '/admin/add-product',
+      editing: false,
+      hasError: true,
+      product: {
+        title: title,
+        imageUrl: imageUrl,
+        price: price,
+        description: description
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  const product = new Product({
+    _id: new mongoose.Types.ObjectId('5c4ad9963b8f0c27b867d18f'), // here we are setting the id of the new product that we will create with an id of an existing product in the database to simulate an err(technical error i guess)
+    title: title,
+    price: price,
+    description: description,
+    imageUrl: imageUrl,
+    userId: req.user
+  });
+  product
+    .save()
+    .then(result => {
+      // console.log(result);
+      console.log('Created Product');
+      res.redirect('/admin/products');
+    })
+    .catch(err => { // we are doing everything to handle the error in this catch block cause this is an async error
+      // return res.status(500).render('admin/edit-product', {
+      //   pageTitle: 'Add Product',
+      //   path: '/admin/add-product',
+      //   editing: false,
+      //   hasError: true,
+      //   product: {
+      //     title: title,
+      //     imageUrl: imageUrl,
+      //     price: price,
+      //     description: description
+      //   },
+      //   errorMessage: 'Database operation failed, please try again.',
+      //   validationErrors: []
+      // });
+      res.redirect('/500'); // in case that we want to create an object with an id that already exists for another product in the database we redirect to '/500'
+    });
+};
+
+exports.getEditProduct = (req, res, next) => {
+  const editMode = req.query.edit;
+  if (!editMode) {
+    return res.redirect('/');
+  }
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      if (!product) {
+        return res.redirect('/');
+      }
+      res.render('admin/edit-product', {
+        pageTitle: 'Edit Product',
+        path: '/admin/edit-product',
+        editing: editMode,
+        product: product,
+        hasError: false,
+        errorMessage: null,
+        validationErrors: []
+      });
+    })
+    .catch(err => console.log(err));
+};
+
+exports.postEditProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  const updatedTitle = req.body.title;
+  const updatedPrice = req.body.price;
+  const updatedImageUrl = req.body.imageUrl;
+  const updatedDesc = req.body.description;
+
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Edit Product',
+      path: '/admin/edit-product',
+      editing: true,
+      hasError: true,
+      product: {
+        title: updatedTitle,
+        imageUrl: updatedImageUrl,
+        price: updatedPrice,
+        description: updatedDesc,
+        _id: prodId
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  Product.findById(prodId)
+    .then(product => {
+      if (product.userId.toString() !== req.user._id.toString()) {
+        return res.redirect('/');
+      }
+      product.title = updatedTitle;
+      product.price = updatedPrice;
+      product.description = updatedDesc;
+      product.imageUrl = updatedImageUrl;
+      return product.save().then(result => {
+        console.log('UPDATED PRODUCT!');
+        res.redirect('/admin/products');
+      });
+    })
+    .catch(err => console.log(err));
+};
+
+exports.getProducts = (req, res, next) => {
+  Product.find({ userId: req.user._id })
+    // .select('title price -_id')
+    // .populate('userId', 'name')
+    .then(products => {
+      console.log(products);
+      res.render('admin/products', {
+        prods: products,
+        pageTitle: 'Admin Products',
+        path: '/admin/products'
+      });
+    })
+    .catch(err => console.log(err));
+};
+
+exports.postDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.deleteOne({ _id: prodId, userId: req.user._id })
+    .then(() => {
+      console.log('DESTROYED PRODUCT');
+      res.redirect('/admin/products');
+    })
+    .catch(err => console.log(err));
+};
+
+
+// /controllers/error.js
+
+exports.get404 = (req, res, next) => {
+  res.status(404).render('404', {
+    pageTitle: 'Page Not Found',
+    path: '/404',
+    isAuthenticated: req.session.isLoggedIn
+  });
+};
+
+exports.get500 = (req, res, next) => {
+  res.status(500).render('500', { // here we set the status of 500
+    pageTitle: 'Error',
+    path: '/500',
+    isAuthenticated: req.session.isLoggedIn
+  });
+};
+
+
+
+
+// 307. Using the Express.js Error Handling Middleware
+
+// /controllers/admin.js
+
+const mongoose = require('mongoose');
+
+const { validationResult } = require('express-validator/check');
+
+const Product = require('../models/product');
+
+exports.getAddProduct = (req, res, next) => {
+  res.render('admin/edit-product', {
+    pageTitle: 'Add Product',
+    path: '/admin/add-product',
+    editing: false,
+    hasError: false,
+    errorMessage: null,
+    validationErrors: []
+  });
+};
+
+exports.postAddProduct = (req, res, next) => {
+  const title = req.body.title;
+  const imageUrl = req.body.imageUrl;
+  const price = req.body.price;
+  const description = req.body.description;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors.array());
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Add Product',
+      path: '/admin/add-product',
+      editing: false,
+      hasError: true,
+      product: {
+        title: title,
+        imageUrl: imageUrl,
+        price: price,
+        description: description
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  const product = new Product({
+    _id: new mongoose.Types.ObjectId('5c4ad9963b8f0c27b867d18f'),
+    title: title,
+    price: price,
+    description: description,
+    imageUrl: imageUrl,
+    userId: req.user
+  });
+  product
+    .save()
+    .then(result => {
+      // console.log(result);
+      console.log('Created Product');
+      res.redirect('/admin/products');
+    })
+    .catch(err => {
+      // return res.status(500).render('admin/edit-product', {
+      //   pageTitle: 'Add Product',
+      //   path: '/admin/add-product',
+      //   editing: false,
+      //   hasError: true,
+      //   product: {
+      //     title: title,
+      //     imageUrl: imageUrl,
+      //     price: price,
+      //     description: description
+      //   },
+      //   errorMessage: 'Database operation failed, please try again.',
+      //   validationErrors: []
+      // });
+      // res.redirect('/500');
+      const error = new Error(err); // creating an 'error' with the 'err' from 'catch' block
+      error.httpStatusCode = 500; // setting status 500
+      return next(error); // in case of an error express will know this and will skip all the middlewares till the 'error middleware'
+    });
+};
+
+exports.getEditProduct = (req, res, next) => {
+  const editMode = req.query.edit;
+  if (!editMode) {
+    return res.redirect('/');
+  }
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      if (!product) {
+        return res.redirect('/');
+      }
+      res.render('admin/edit-product', {
+        pageTitle: 'Edit Product',
+        path: '/admin/edit-product',
+        editing: editMode,
+        product: product,
+        hasError: false,
+        errorMessage: null,
+        validationErrors: []
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postEditProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  const updatedTitle = req.body.title;
+  const updatedPrice = req.body.price;
+  const updatedImageUrl = req.body.imageUrl;
+  const updatedDesc = req.body.description;
+
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Edit Product',
+      path: '/admin/edit-product',
+      editing: true,
+      hasError: true,
+      product: {
+        title: updatedTitle,
+        imageUrl: updatedImageUrl,
+        price: updatedPrice,
+        description: updatedDesc,
+        _id: prodId
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  Product.findById(prodId)
+    .then(product => {
+      if (product.userId.toString() !== req.user._id.toString()) {
+        return res.redirect('/');
+      }
+      product.title = updatedTitle;
+      product.price = updatedPrice;
+      product.description = updatedDesc;
+      product.imageUrl = updatedImageUrl;
+      return product.save().then(result => {
+        console.log('UPDATED PRODUCT!');
+        res.redirect('/admin/products');
+      });
+    })
+    .catch(err => console.log(err));
+};
+
+exports.getProducts = (req, res, next) => {
+  Product.find({ userId: req.user._id })
+    // .select('title price -_id')
+    // .populate('userId', 'name')
+    .then(products => {
+      console.log(products);
+      res.render('admin/products', {
+        prods: products,
+        pageTitle: 'Admin Products',
+        path: '/admin/products'
+      });
+    })
+    .catch(err => console.log(err));
+};
+
+exports.postDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.deleteOne({ _id: prodId, userId: req.user._id })
+    .then(() => {
+      console.log('DESTROYED PRODUCT');
+      res.redirect('/admin/products');
+    })
+    .catch(err => console.log(err));
+};
+
+
+// app.js
+
+const path = require('path');
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
+const csrf = require('csurf');
+const flash = require('connect-flash');
+
+const errorController = require('./controllers/error');
+const User = require('./models/user');
+
+const MONGODB_URI =
+  'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/shop';
+
+const app = express();
+const store = new MongoDBStore({
+  uri: MONGODB_URI,
+  collection: 'sessions'
+});
+const csrfProtection = csrf();
+
+app.set('view engine', 'ejs');
+app.set('views', 'views');
+
+const adminRoutes = require('./routes/admin');
+const shopRoutes = require('./routes/shop');
+const authRoutes = require('./routes/auth');
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(
+  session({
+    secret: 'my secret',
+    resave: false,
+    saveUninitialized: false,
+    store: store
+  })
+);
+app.use(csrfProtection);
+app.use(flash());
+
+app.use((req, res, next) => {
+  if (!req.session.user) {
+    return next();
+  }
+  User.findById(req.session.user._id)
+    .then(user => {
+      if (!user) {
+        return next();
+      }
+      req.user = user;
+      next();
+    })
+    .catch(err => {
+      throw new Error(err);
+    });
+});
+
+app.use((req, res, next) => {
+  res.locals.isAuthenticated = req.session.isLoggedIn;
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
+
+app.use('/admin', adminRoutes);
+app.use(shopRoutes);
+app.use(authRoutes);
+
+app.get('/500', errorController.get500);
+
+app.use(errorController.get404);
+
+app.use((error, req, res, next) => { // this an error middleware which will handle errors, in case that there are some errors, express will skip all the other middlewares in between and it will reach this 'error' middleware
+  res.redirect('/500');
+});
+
+mongoose
+  .connect(MONGODB_URI)
+  .then(result => {
+    app.listen(3000);
+  })
+  .catch(err => {
+    console.log(err);
+  });
+
+
+
+
+// 308. Updating the App
+
+
+
+
+// 309. Using the Error Handling Middleware Correctly
+
+// app.js
+
+const path = require('path');
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
+const csrf = require('csurf');
+const flash = require('connect-flash');
+
+const errorController = require('./controllers/error');
+const User = require('./models/user');
+
+const MONGODB_URI =
+  'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/shop';
+
+const app = express();
+const store = new MongoDBStore({
+  uri: MONGODB_URI,
+  collection: 'sessions'
+});
+const csrfProtection = csrf();
+
+app.set('view engine', 'ejs');
+app.set('views', 'views');
+
+const adminRoutes = require('./routes/admin');
+const shopRoutes = require('./routes/shop');
+const authRoutes = require('./routes/auth');
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(
+  session({
+    secret: 'my secret',
+    resave: false,
+    saveUninitialized: false,
+    store: store
+  })
+);
+app.use(csrfProtection);
+app.use(flash());
+
+app.use((req, res, next) => {
+  res.locals.isAuthenticated = req.session.isLoggedIn;
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
+
+app.use((req, res, next) => {
+  // throw new Error('Sync Dummy')
+  if (!req.session.user) {
+    return next();
+  }
+  User.findById(req.session.user._id)
+    .then(user => {
+      if (!user) {
+        return next();
+      }
+      req.user = user;
+      next();
+    })
+    .catch(err => {
+      next(new Error(err)); // inside the promise of callbacks we have to use next with errors
+    });
+});
+
+app.use('/admin', adminRoutes);
+app.use(shopRoutes);
+app.use(authRoutes);
+
+app.get('/500', errorController.get500);
+
+app.use(errorController.get404);
+
+app.use((error, req, res, next) => { 
+  // res.redirect('/500');
+  res.status(500).render('500', {
+    pageTitle: 'Error',
+    path: '/500',
+    isAuthenticated: req.session.isLoggedIn
+  });
+});
+
+mongoose
+  .connect(MONGODB_URI)
+  .then(result => {
+    app.listen(3000);
+  })
+  .catch(err => {
+    console.log(err);
+  });
+
+
+
+
+// 310. Status Code  
+
+
+
+
+// 315. Adding a File Picker to the Frontend
+
+
+
+
+// 316. Handling Multipart Form Data
+
+// npm install --save multer  // parsing incoming request, like files, it's able to handle file requests or requests with mixed data
+
+// /views/admin/edit-product.ejs
+
+// <%- include('../includes/head.ejs') %>
+//     <link rel="stylesheet" href="/css/forms.css">
+//     <link rel="stylesheet" href="/css/product.css">
+// </head>
+
+// <body>
+//    <%- include('../includes/navigation.ejs') %>
+
+//     <main>
+//         <% if (errorMessage) { %>
+//             <div class="user-message user-message--error"><%= errorMessage %></div>
+//         <% } %>
+//         <form class="product-form" action="/admin/<% if (editing) { %>edit-product<% } else { %>add-product<% } %>" method="POST" enctype="multipart/form-data"> // this means that we will have file to upload or somethng like that
+//             <div class="form-control">
+//                 <label for="title">Title</label>
+//                 <input 
+//                     class="<%= validationErrors.find(e => e.param === 'title') ? 'invalid' : '' %>"
+//                     type="text" 
+//                     name="title" 
+//                     id="title" 
+//                     value="<% if (editing || hasError) { %><%= product.title %><% } %>">
+//             </div>
+//             <!-- <div class="form-control">
+//                 <label for="imageUrl">Image URL</label>
+//                 <input 
+//                     class="<%= validationErrors.find(e => e.param === 'imageUrl') ? 'invalid' : '' %>"
+//                     type="text" 
+//                     name="imageUrl" 
+//                     id="imageUrl" 
+//                     value="<% if (editing || hasError) { %><%= product.imageUrl %><% } %>">
+//             </div> -->
+//             <div class="form-control">
+//                 <label for="image">Image</label>
+//                 <input 
+//                     type="file" 
+//                     name="image" 
+//                     id="image " >
+//             </div>
+//             <div class="form-control">
+//                 <label for="price">Price</label>
+//                 <input 
+//                     class="<%= validationErrors.find(e => e.param === 'price') ? 'invalid' : '' %>"
+//                     type="number" 
+//                     name="price" 
+//                     id="price" 
+//                     step="0.01" 
+//                     value="<% if (editing || hasError) { %><%= product.price %><% } %>">
+//             </div>
+//             <div class="form-control">
+//                 <label for="description">Description</label>
+//                 <textarea 
+//                     class="<%= validationErrors.find(e => e.param === 'description') ? 'invalid' : '' %>"
+//                     name="description" 
+//                     id="description" 
+//                     rows="5"><% if (editing || hasError) { %><%= product.description %><% } %></textarea>
+//             </div>
+//             <% if (editing) { %>
+//                 <input type="hidden" value="<%= product._id %>" name="productId">
+//             <% } %>
+
+//             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+//             <button class="btn" type="submit"><% if (editing) { %>Update Product<% } else { %>Add Product<% } %></button>
+//         </form>
+//     </main>
+// <%- include('../includes/end.ejs') %>
+
+
+
+
+// 317. Handling File Uploads with Multer
+
+// app.js
+
+const path = require('path');
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
+const csrf = require('csurf');
+const flash = require('connect-flash');
+const multer = require('multer'); // require multer
+
+const errorController = require('./controllers/error');
+const User = require('./models/user');
+
+const MONGODB_URI =
+  'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/shop';
+
+const app = express();
+const store = new MongoDBStore({
+  uri: MONGODB_URI,
+  collection: 'sessions'
+});
+const csrfProtection = csrf();
+
+app.set('view engine', 'ejs');
+app.set('views', 'views');
+
+const adminRoutes = require('./routes/admin');
+const shopRoutes = require('./routes/shop');
+const authRoutes = require('./routes/auth');
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(multer({dest: 'images'}).single('image')); // executing multer middleware for every incoming request, '.single('image')' means that will parse just one 'file' with the name 'image', '{dest: 'images}' this means that the multer will transform the 'image' which we are uploading from the 'buffer' to actually a 'binary image' in the folder 'images'(from the root directory of the project)
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(
+  session({
+    secret: 'my secret',
+    resave: false,
+    saveUninitialized: false,
+    store: store
+  })
+);
+app.use(csrfProtection);
+app.use(flash());
+
+app.use((req, res, next) => {
+  res.locals.isAuthenticated = req.session.isLoggedIn;
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
+
+app.use((req, res, next) => {
+  // throw new Error('Sync Dummy')
+  if (!req.session.user) {
+    return next();
+  }
+  User.findById(req.session.user._id)
+    .then(user => {
+      if (!user) {
+        return next();
+      }
+      req.user = user;
+      next();
+    })
+    .catch(err => {
+      next(new Error(err)); 
+    });
+});
+
+app.use('/admin', adminRoutes);
+app.use(shopRoutes);
+app.use(authRoutes);
+
+app.get('/500', errorController.get500);
+
+app.use(errorController.get404);
+
+app.use((error, req, res, next) => { 
+  // res.redirect('/500');
+  res.status(500).render('500', {
+    pageTitle: 'Error',
+    path: '/500',
+    isAuthenticated: req.session.isLoggedIn
+  });
+});
+
+mongoose
+  .connect(MONGODB_URI)
+  .then(result => {
+    app.listen(3000);
+  })
+  .catch(err => {
+    console.log(err);
+  });
+
+
+// /controllers/admin.js
+
+const mongoose = require('mongoose');
+
+const { validationResult } = require('express-validator/check');
+
+const Product = require('../models/product');
+
+exports.getAddProduct = (req, res, next) => {
+  res.render('admin/edit-product', {
+    pageTitle: 'Add Product',
+    path: '/admin/add-product',
+    editing: false,
+    hasError: false,
+    errorMessage: null,
+    validationErrors: []
+  });
+};
+
+exports.postAddProduct = (req, res, next) => {
+  const title = req.body.title;
+  const imageUrl = req.file; // here we are looking for the image in the 'request.file'
+  const price = req.body.price;
+  const description = req.body.description;
+  console.log(imageUrl);
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors.array());
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Add Product',
+      path: '/admin/add-product',
+      editing: false,
+      hasError: true,
+      product: {
+        title: title,
+        imageUrl: imageUrl,
+        price: price,
+        description: description
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  const product = new Product({
+    // _id: new mongoose.Types.ObjectId('5c4ad9963b8f0c27b867d18f'),
+    title: title,
+    price: price,
+    description: description,
+    imageUrl: imageUrl,
+    userId: req.user
+  });
+  product
+    .save()
+    .then(result => {
+      // console.log(result);
+      console.log('Created Product');
+      res.redirect('/admin/products');
+    })
+    .catch(err => {
+      // return res.status(500).render('admin/edit-product', {
+      //   pageTitle: 'Add Product',
+      //   path: '/admin/add-product',
+      //   editing: false,
+      //   hasError: true,
+      //   product: {
+      //     title: title,
+      //     imageUrl: imageUrl,
+      //     price: price,
+      //     description: description
+      //   },
+      //   errorMessage: 'Database operation failed, please try again.',
+      //   validationErrors: []
+      // });
+      // res.redirect('/500');
+      const error = new Error(err); 
+      error.httpStatusCode = 500;
+      return next(error); 
+    });
+};
+
+exports.getEditProduct = (req, res, next) => {
+  const editMode = req.query.edit;
+  if (!editMode) {
+    return res.redirect('/');
+  }
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      if (!product) {
+        return res.redirect('/');
+      }
+      res.render('admin/edit-product', {
+        pageTitle: 'Edit Product',
+        path: '/admin/edit-product',
+        editing: editMode,
+        product: product,
+        hasError: false,
+        errorMessage: null,
+        validationErrors: []
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postEditProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  const updatedTitle = req.body.title;
+  const updatedPrice = req.body.price;
+  const updatedImageUrl = req.body.imageUrl;
+  const updatedDesc = req.body.description;
+
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Edit Product',
+      path: '/admin/edit-product',
+      editing: true,
+      hasError: true,
+      product: {
+        title: updatedTitle,
+        imageUrl: updatedImageUrl,
+        price: updatedPrice,
+        description: updatedDesc,
+        _id: prodId
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  Product.findById(prodId)
+    .then(product => {
+      if (product.userId.toString() !== req.user._id.toString()) {
+        return res.redirect('/');
+      }
+      product.title = updatedTitle;
+      product.price = updatedPrice;
+      product.description = updatedDesc;
+      product.imageUrl = updatedImageUrl;
+      return product.save().then(result => {
+        console.log('UPDATED PRODUCT!');
+        res.redirect('/admin/products');
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getProducts = (req, res, next) => {
+  Product.find({ userId: req.user._id })
+    // .select('title price -_id')
+    // .populate('userId', 'name')
+    .then(products => {
+      console.log(products);
+      res.render('admin/products', {
+        prods: products,
+        pageTitle: 'Admin Products',
+        path: '/admin/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.deleteOne({ _id: prodId, userId: req.user._id })
+    .then(() => {
+      console.log('DESTROYED PRODUCT');
+      res.redirect('/admin/products');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+
+
+
+// 318. Configuring Multer to Adjust Filename Pathmongodb
+
+const path = require('path');
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
+const csrf = require('csurf');
+const flash = require('connect-flash');
+const multer = require('multer'); 
+
+const errorController = require('./controllers/error');
+const User = require('./models/user');
+
+const MONGODB_URI =
+  'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/shop';
+
+const app = express();
+const store = new MongoDBStore({
+  uri: MONGODB_URI,
+  collection: 'sessions'
+});
+const csrfProtection = csrf();
+
+const fileStorage = multer.diskStorage({ // here we are we setting where the file will be stored and their name
+  destination: (req, file, cb) => {
+    cb(null, 'images'); // where this the file we are uploaing will be stored(this is the folder name )
+  },
+  filename: (req, file, cb) => {
+    cb(null, new Date().toISOString() + '-' + file.originalname); // how files will be named(dateNow) and original name
+  } 
+});
+
+app.set('view engine', 'ejs');
+app.set('views', 'views');
+
+const adminRoutes = require('./routes/admin');
+const shopRoutes = require('./routes/shop');
+const authRoutes = require('./routes/auth');
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(multer({ storage: fileStorage }).single('image')); // and here we are just telling the 'storage' to be  what we already define as 'fileStorega' above 
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(
+  session({
+    secret: 'my secret',
+    resave: false,
+    saveUninitialized: false,
+    store: store
+  })
+);
+app.use(csrfProtection);
+app.use(flash());
+
+app.use((req, res, next) => {
+  res.locals.isAuthenticated = req.session.isLoggedIn;
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
+
+app.use((req, res, next) => {
+  // throw new Error('Sync Dummy')
+  if (!req.session.user) {
+    return next();
+  }
+  User.findById(req.session.user._id)
+    .then(user => {
+      if (!user) {
+        return next();
+      }
+      req.user = user;
+      next();
+    })
+    .catch(err => {
+      next(new Error(err)); 
+    });
+});
+
+app.use('/admin', adminRoutes);
+app.use(shopRoutes);
+app.use(authRoutes);
+
+app.get('/500', errorController.get500);
+
+app.use(errorController.get404);
+
+app.use((error, req, res, next) => { 
+  // res.redirect('/500');
+  res.status(500).render('500', {
+    pageTitle: 'Error',
+    path: '/500',
+    isAuthenticated: req.session.isLoggedIn
+  });
+});
+
+mongoose
+  .connect(MONGODB_URI)
+  .then(result => {
+    app.listen(3000);
+  })
+  .catch(err => {
+    console.log(err);
+  });
+
+
+
+
+// 319. Filtering Files by Mimetype  
+
+const path = require('path');
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
+const csrf = require('csurf');
+const flash = require('connect-flash');
+const multer = require('multer'); 
+
+const errorController = require('./controllers/error');
+const User = require('./models/user');
+
+const MONGODB_URI =
+  'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/shop';
+
+const app = express();
+const store = new MongoDBStore({
+  uri: MONGODB_URI,
+  collection: 'sessions'
+});
+const csrfProtection = csrf();
+
+const fileStorage = multer.diskStorage({ 
+  destination: (req, file, cb) => {
+    cb(null, 'images'); 
+  },
+  filename: (req, file, cb) => {
+    cb(null, new Date().toISOString() + '-' + file.originalname); 
+  } 
+});
+
+const fileFilter = (req, file, cb) => {
+  if(
+    file.minetype === 'image/png' || 
+    file.minetype === 'image/jpg' || 
+    file.minetype === 'image/jpeg'   // here we define what kind of file we are allowing our app to upload
+    ) {
+    cb(null, true); // in case it has the extensions that we want it will upload 
+  } else {
+    cb(null, false); // if not it will not upload
+  }
+}
+
+app.set('view engine', 'ejs');
+app.set('views', 'views');
+
+const adminRoutes = require('./routes/admin');
+const shopRoutes = require('./routes/shop');
+const authRoutes = require('./routes/auth');
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(multer({ storage: fileStorage, fileFilter: fileFilter }).single('image'));   // fileFilter: fileFilter   is our function which filter the types of file which we are uploading
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(
+  session({
+    secret: 'my secret',
+    resave: false,
+    saveUninitialized: false,
+    store: store
+  })
+);
+app.use(csrfProtection);
+app.use(flash());
+
+app.use((req, res, next) => {
+  res.locals.isAuthenticated = req.session.isLoggedIn;
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
+
+app.use((req, res, next) => {
+  // throw new Error('Sync Dummy')
+  if (!req.session.user) {
+    return next();
+  }
+  User.findById(req.session.user._id)
+    .then(user => {
+      if (!user) {
+        return next();
+      }
+      req.user = user;
+      next();
+    })
+    .catch(err => {
+      next(new Error(err)); 
+    });
+});
+
+app.use('/admin', adminRoutes);
+app.use(shopRoutes);
+app.use(authRoutes);
+
+app.get('/500', errorController.get500);
+
+app.use(errorController.get404);
+
+app.use((error, req, res, next) => { 
+  // res.redirect('/500');
+  res.status(500).render('500', {
+    pageTitle: 'Error',
+    path: '/500',
+    isAuthenticated: req.session.isLoggedIn
+  });
+});
+
+mongoose
+  .connect(MONGODB_URI)
+  .then(result => {
+    app.listen(3000);
+  })
+  .catch(err => {
+    console.log(err);
+  });
+
+
+
+
+// 320. Storing File Data in the Database
+
+// Files should not be stored in the database, are too big, it's too inefficient to store them in a database, so we we'll store them in the file system(but of course you need to store something in a database, like the path to the file)
+
+// /controllers/admin.js
+
+const mongoose = require('mongoose');
+
+const { validationResult } = require('express-validator/check');
+
+const Product = require('../models/product');
+
+exports.getAddProduct = (req, res, next) => {
+  res.render('admin/edit-product', {
+    pageTitle: 'Add Product',
+    path: '/admin/add-product',
+    editing: false,
+    hasError: false,
+    errorMessage: null,
+    validationErrors: []
+  });
+};
+
+exports.postAddProduct = (req, res, next) => {
+  const title = req.body.title;
+  const image = req.file;
+  const price = req.body.price;
+  const description = req.body.description;
+  if (!image) { // if there is no image(picture) we will executte the code below
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Add Product',
+      path: '/admin/add-product',
+      editing: false,
+      hasError: true,
+      product: {
+        title: title,
+        price: price,
+        description: description
+      },
+      errorMessage: 'Attached file is not an image.',
+      validationErrors: []
+    });
+  }
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors.array());
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Add Product',
+      path: '/admin/add-product',
+      editing: false,
+      hasError: true,
+      product: {
+        title: title,
+        imageUrl: imageUrl,
+        price: price,
+        description: description
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  const imageUrl = image.path; // this is the path to the image in the file system
+
+  const product = new Product({
+    // _id: new mongoose.Types.ObjectId('5c4ad9963b8f0c27b867d18f'),
+    title: title,
+    price: price,
+    description: description,
+    imageUrl: imageUrl, // here we are storing the imageUrl(which is path image) in the database
+    userId: req.user
+  });
+  product
+    .save()
+    .then(result => {
+      // console.log(result);
+      console.log('Created Product');
+      res.redirect('/admin/products');
+    })
+    .catch(err => {
+      // return res.status(500).render('admin/edit-product', {
+      //   pageTitle: 'Add Product',
+      //   path: '/admin/add-product',
+      //   editing: false,
+      //   hasError: true,
+      //   product: {
+      //     title: title,
+      //     imageUrl: imageUrl,
+      //     price: price,
+      //     description: description
+      //   },
+      //   errorMessage: 'Database operation failed, please try again.',
+      //   validationErrors: []
+      // });
+      // res.redirect('/500');
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getEditProduct = (req, res, next) => {
+  const editMode = req.query.edit;
+  if (!editMode) {
+    return res.redirect('/');
+  }
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      if (!product) {
+        return res.redirect('/');
+      }
+      res.render('admin/edit-product', {
+        pageTitle: 'Edit Product',
+        path: '/admin/edit-product',
+        editing: editMode,
+        product: product,
+        hasError: false,
+        errorMessage: null,
+        validationErrors: []
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postEditProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  const updatedTitle = req.body.title;
+  const updatedPrice = req.body.price;
+  const image = req.file; // if we want to edit a product here we will work with the file
+  const updatedDesc = req.body.description;
+
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Edit Product',
+      path: '/admin/edit-product',
+      editing: true,
+      hasError: true,
+      product: {
+        title: updatedTitle,
+        price: updatedPrice,
+        description: updatedDesc,
+        _id: prodId
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  Product.findById(prodId)
+    .then(product => {
+      if (product.userId.toString() !== req.user._id.toString()) {
+        return res.redirect('/');
+      }
+      product.title = updatedTitle;
+      product.price = updatedPrice;
+      product.description = updatedDesc;
+      if(image) { // if there is an image(which was upload as a new image) we are setting the product image to 'image.path'(and in this case we will overwrite the image)
+        product.imageUrl = image.path; 
+      }
+      return product.save().then(result => {
+        console.log('UPDATED PRODUCT!');
+        res.redirect('/admin/products');
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getProducts = (req, res, next) => {
+  Product.find({ userId: req.user._id })
+    // .select('title price -_id')
+    // .populate('userId', 'name')
+    .then(products => {
+      console.log(products);
+      res.render('admin/products', {
+        prods: products,
+        pageTitle: 'Admin Products',
+        path: '/admin/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.deleteOne({ _id: prodId, userId: req.user._id })
+    .then(() => {
+      console.log('DESTROYED PRODUCT');
+      res.redirect('/admin/products');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+
+
+
+// 322. Serving Images Statically
+
+// app.js
+
+const path = require('path');
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoDBStore = require('connect-mongodb-session')(session);
+const csrf = require('csurf');
+const flash = require('connect-flash');
+const multer = require('multer');
+
+const errorController = require('./controllers/error');
+const User = require('./models/user');
+
+const MONGODB_URI =
+  'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/shop';
+
+const app = express();
+const store = new MongoDBStore({
+  uri: MONGODB_URI,
+  collection: 'sessions'
+});
+const csrfProtection = csrf();
+
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'images');
+  },
+  filename: (req, file, cb) => {
+    cb(null, new Date().toISOString() + '-' + file.originalname);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === 'image/png' ||
+    file.mimetype === 'image/jpg' ||
+    file.mimetype === 'image/jpeg'
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
+
+app.set('view engine', 'ejs');
+app.set('views', 'views');
+
+const adminRoutes = require('./routes/admin');
+const shopRoutes = require('./routes/shop');
+const authRoutes = require('./routes/auth');
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(
+  multer({ storage: fileStorage, fileFilter: fileFilter }).single('image')
+);
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/images', express.static(path.join(__dirname, 'images'))); // here we are serving the images staticlly, so if someone want to access '/images' we will serve 'images' folder (in our case the products for images will access this folder)
+app.use(
+  session({
+    secret: 'my secret',
+    resave: false,
+    saveUninitialized: false,
+    store: store
+  })
+);
+app.use(csrfProtection);
+app.use(flash());
+
+app.use((req, res, next) => {
+  res.locals.isAuthenticated = req.session.isLoggedIn;
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
+
+app.use((req, res, next) => {
+  // throw new Error('Sync Dummy');
+  if (!req.session.user) {
+    return next();
+  }
+  User.findById(req.session.user._id)
+    .then(user => {
+      if (!user) {
+        return next();
+      }
+      req.user = user;
+      next();
+    })
+    .catch(err => {
+      next(new Error(err));
+    });
+});
+
+app.use('/admin', adminRoutes);
+app.use(shopRoutes);
+app.use(authRoutes);
+
+app.get('/500', errorController.get500);
+
+app.use(errorController.get404);
+
+app.use((error, req, res, next) => {
+  // res.status(error.httpStatusCode).render(...);
+  // res.redirect('/500');
+  res.status(500).render('500', {
+    pageTitle: 'Error!',
+    path: '/500',
+    isAuthenticated: req.session.isLoggedIn
+  });
+});
+
+mongoose
+  .connect(MONGODB_URI)
+  .then(result => {
+    app.listen(3000);
+  })
+  .catch(err => {
+    console.log(err);
+  });
+
+
+
+
+// 323. Downloading Files with Authentication
+
+// /controllers/shop.js
+
+exports.getInvoice = (req, res, next) => {
+  const orderId = req.params.orderId;
+  const invoiceName = 'invoice-' + orderId + '.pdf';
+  const invoicePath = path.join('data', 'invoices', invoiceName);
+  fs.readFile(invoicePath, (err, data) => { // with this we are able to download the incoive
+    if(err) {
+     return next(err);
+    }
+    res.send(data);
+  });
+};
+
+// /routes/shop.js
+
+router.get('/orders/:orderId', isAuth, shopController.getInvoice);
+
+
+
+
+// 324. Setting File Type Headers
+
+// /controllers/shop.js
+
+const fs = require('fs'); // importing fs
+const path = require('path'); // importing path
+
+const Product = require('../models/product');
+const Order = require('../models/order');
+
+exports.getProducts = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      console.log(products);
+      res.render('shop/product-list', {
+        prods: products,
+        pageTitle: 'All Products',
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getProduct = (req, res, next) => {
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      res.render('shop/product-detail', {
+        product: product,
+        pageTitle: product.title,
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getIndex = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      res.render('shop/index', {
+        prods: products,
+        pageTitle: 'Shop',
+        path: '/'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getCart = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items;
+      res.render('shop/cart', {
+        path: '/cart',
+        pageTitle: 'Your Cart',
+        products: products
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCart = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.findById(prodId)
+    .then(product => {
+      return req.user.addToCart(product);
+    })
+    .then(result => {
+      console.log(result);
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCartDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  req.user
+    .removeFromCart(prodId)
+    .then(result => {
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postOrder = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items.map(i => {
+        return { quantity: i.quantity, product: { ...i.productId._doc } };
+      });
+      const order = new Order({
+        user: {
+          email: req.user.email,
+          userId: req.user
+        },
+        products: products
+      });
+      return order.save();
+    })
+    .then(result => {
+      return req.user.clearCart();
+    })
+    .then(() => {
+      res.redirect('/orders');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getOrders = (req, res, next) => {
+  Order.find({ 'user.userId': req.user._id })
+    .then(orders => {
+      res.render('shop/orders', {
+        path: '/orders',
+        pageTitle: 'Your Orders',
+        orders: orders
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getInvoice = (req, res, next) => {
+  const orderId = req.params.orderId;
+  const invoiceName = 'invoice-' + orderId + '.pdf';
+  const invoicePath = path.join('data', 'invoices', invoiceName);
+  fs.readFile(invoicePath, (err, data) => {
+    if(err) {
+     return next(err);
+    }
+    res.setHeader('Content-Type', 'application/pdf');// here we are setting a header and we are telling that this is an 'pdf' and if we set this we can open the pdf in the browser
+    res.setHeader('Content-Disposition', 'inline; filename="' + invoiceName +'"'); // this will set how the users will download the invoice, 'inline' it will open the pdf in a new tab, but if we use 'attachment' this will download the pdf, fileName is how our pdf will be named when we download it
+    res.send(data);
+  });
+};
+
+
+
+
+// 325. Restricting File Access
+
+const fs = require('fs'); 
+const path = require('path'); 
+
+const Product = require('../models/product');
+const Order = require('../models/order');
+
+exports.getProducts = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      console.log(products);
+      res.render('shop/product-list', {
+        prods: products,
+        pageTitle: 'All Products',
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getProduct = (req, res, next) => {
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      res.render('shop/product-detail', {
+        product: product,
+        pageTitle: product.title,
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getIndex = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      res.render('shop/index', {
+        prods: products,
+        pageTitle: 'Shop',
+        path: '/'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getCart = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items;
+      res.render('shop/cart', {
+        path: '/cart',
+        pageTitle: 'Your Cart',
+        products: products
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCart = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.findById(prodId)
+    .then(product => {
+      return req.user.addToCart(product);
+    })
+    .then(result => {
+      console.log(result);
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCartDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  req.user
+    .removeFromCart(prodId)
+    .then(result => {
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postOrder = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items.map(i => {
+        return { quantity: i.quantity, product: { ...i.productId._doc } };
+      });
+      const order = new Order({
+        user: {
+          email: req.user.email,
+          userId: req.user
+        },
+        products: products
+      });
+      return order.save();
+    })
+    .then(result => {
+      return req.user.clearCart();
+    })
+    .then(() => {
+      res.redirect('/orders');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getOrders = (req, res, next) => {
+  Order.find({ 'user.userId': req.user._id })
+    .then(orders => {
+      res.render('shop/orders', {
+        path: '/orders',
+        pageTitle: 'Your Orders',
+        orders: orders
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getInvoice = (req, res, next) => {
+  const orderId = req.params.orderId; 
+  Order.findById(orderId).then(order => { // here we are looking for the order with that id 
+    if (!order) { // if it doesn't exist it will throw an err
+      return next(new Error('No order found.'));
+    }
+    if(order.user.userId.toString() !== req.user._id.toString()) { // if the user which made that order isn't the user which is actually loggin, it will throw an err
+      return next(new Error('Unauthorized'));
+    } // if everything is ok, it will work
+    const invoiceName = 'invoice-' + orderId + '.pdf';
+    const invoicePath = path.join('data', 'invoices', invoiceName);
+    fs.readFile(invoicePath, (err, data) => {
+      if(err) {
+      return next(err);
+      }
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="' + invoiceName +'"'); 
+      res.send(data);
+    });
+  }).catch(err => next(err));
+};
+
+
+
+
+// 326. Streaming Data vs Preloading Data
+
+const fs = require('fs'); 
+const path = require('path'); 
+
+const Product = require('../models/product');
+const Order = require('../models/order');
+
+exports.getProducts = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      console.log(products);
+      res.render('shop/product-list', {
+        prods: products,
+        pageTitle: 'All Products',
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getProduct = (req, res, next) => {
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      res.render('shop/product-detail', {
+        product: product,
+        pageTitle: product.title,
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getIndex = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      res.render('shop/index', {
+        prods: products,
+        pageTitle: 'Shop',
+        path: '/'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getCart = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items;
+      res.render('shop/cart', {
+        path: '/cart',
+        pageTitle: 'Your Cart',
+        products: products
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCart = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.findById(prodId)
+    .then(product => {
+      return req.user.addToCart(product);
+    })
+    .then(result => {
+      console.log(result);
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCartDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  req.user
+    .removeFromCart(prodId)
+    .then(result => {
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postOrder = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items.map(i => {
+        return { quantity: i.quantity, product: { ...i.productId._doc } };
+      });
+      const order = new Order({
+        user: {
+          email: req.user.email,
+          userId: req.user
+        },
+        products: products
+      });
+      return order.save();
+    })
+    .then(result => {
+      return req.user.clearCart();
+    })
+    .then(() => {
+      res.redirect('/orders');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getOrders = (req, res, next) => {
+  Order.find({ 'user.userId': req.user._id })
+    .then(orders => {
+      res.render('shop/orders', {
+        path: '/orders',
+        pageTitle: 'Your Orders',
+        orders: orders
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getInvoice = (req, res, next) => {
+  const orderId = req.params.orderId; 
+  Order.findById(orderId).then(order => { 
+    if (!order) { 
+      return next(new Error('No order found.'));
+    }
+    if(order.user.userId.toString() !== req.user._id.toString()) { 
+      return next(new Error('Unauthorized'));
+    } 
+    const invoiceName = 'invoice-' + orderId + '.pdf';
+    const invoicePath = path.join('data', 'invoices', invoiceName);
+    // fs.readFile(invoicePath, (err, data) => {
+    //   if(err) {
+    //   return next(err);
+    //   }
+    //   res.setHeader('Content-Type', 'application/pdf');
+    //   res.setHeader(
+    //     'Content-Disposition', 
+    //     'inline; filename="' + invoiceName +'"'
+    //     ); 
+    //   res.send(data);
+    // }); // in this way the the file it's read entirely in the memory, this is OK for small files, but if the file is large it will take a lot of time(because of this, this is not the best approach) it is better if we are streaming it
+    const file = fs.createReadStream(invoicePath); // here we are creating a Read Stream from 'invoicePath'
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition', 
+      'inline; filename="' + invoiceName +'"'
+    ); 
+    file.pipe(res); // here we are piping the file to the 'res'(response), the data will be downloaded by the browser step by step and this is very good even for the large files cause the browser does not have to preload them in the memory
+  })
+  .catch(err => next(err));
+};
+
+
+
+
+// 327. Using PDFKit for .pdf Generation
+
+// npm install --save pdfkit // this package helps us to create pdf files on the fly
+
+const fs = require('fs'); 
+const path = require('path'); 
+
+const PDFDocument = require('pdfkit'); // importing pdfkit
+
+const Product = require('../models/product');
+const Order = require('../models/order');
+
+exports.getProducts = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      console.log(products);
+      res.render('shop/product-list', {
+        prods: products,
+        pageTitle: 'All Products',
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getProduct = (req, res, next) => {
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      res.render('shop/product-detail', {
+        product: product,
+        pageTitle: product.title,
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getIndex = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      res.render('shop/index', {
+        prods: products,
+        pageTitle: 'Shop',
+        path: '/'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getCart = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items;
+      res.render('shop/cart', {
+        path: '/cart',
+        pageTitle: 'Your Cart',
+        products: products
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCart = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.findById(prodId)
+    .then(product => {
+      return req.user.addToCart(product);
+    })
+    .then(result => {
+      console.log(result);
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCartDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  req.user
+    .removeFromCart(prodId)
+    .then(result => {
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postOrder = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items.map(i => {
+        return { quantity: i.quantity, product: { ...i.productId._doc } };
+      });
+      const order = new Order({
+        user: {
+          email: req.user.email,
+          userId: req.user
+        },
+        products: products
+      });
+      return order.save();
+    })
+    .then(result => {
+      return req.user.clearCart();
+    })
+    .then(() => {
+      res.redirect('/orders');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getOrders = (req, res, next) => {
+  Order.find({ 'user.userId': req.user._id })
+    .then(orders => {
+      res.render('shop/orders', {
+        path: '/orders',
+        pageTitle: 'Your Orders',
+        orders: orders
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getInvoice = (req, res, next) => {
+  const orderId = req.params.orderId; 
+  Order.findById(orderId)
+    .then(order => { 
+      if (!order) { 
+        return next(new Error('No order found.'));
+      }
+      if(order.user.userId.toString() !== req.user._id.toString()) { 
+        return next(new Error('Unauthorized'));
+      } 
+      const invoiceName = 'invoice-' + orderId + '.pdf';
+      const invoicePath = path.join('data', 'invoices', invoiceName);
+
+      const pdfDoc = new PDFDocument();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition', 
+        'inline; filename="' + invoiceName +'"'
+      ); 
+      pdfDoc.pipe(fs.createWriteStream(invoicePath)); // here we are creating a writing stream into invoicePath
+      pdfDoc.pipe(res); // here we are piping the pdfDoc to response 
+
+      pdfDoc.text('Hello World!'); // allow us to add a single line of text to the PDF document
+
+      pdfDoc.end(); // here we are closing writing in the pdf document
+      // fs.readFile(invoicePath, (err, data) => {
+      //   if(err) {
+      //   return next(err);
+      //   }
+      //   res.setHeader('Content-Type', 'application/pdf');
+      //   res.setHeader(
+      //     'Content-Disposition', 
+      //     'inline; filename="' + invoiceName +'"'
+      //     ); 
+      //   res.send(data);
+      // }); 
+      // const file = fs.createReadStream(invoicePath); 
+      
+      // file.pipe(res); 
+  })
+  .catch(err => next(err));
+};
+
+
+
+
+// 328. Generating .pdf Files with Order Data
+
+// /controllers/shop.js
+
+const fs = require('fs'); 
+const path = require('path'); 
+
+const PDFDocument = require('pdfkit'); 
+
+const Product = require('../models/product');
+const Order = require('../models/order');
+
+exports.getProducts = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      console.log(products);
+      res.render('shop/product-list', {
+        prods: products,
+        pageTitle: 'All Products',
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getProduct = (req, res, next) => {
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      res.render('shop/product-detail', {
+        product: product,
+        pageTitle: product.title,
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getIndex = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      res.render('shop/index', {
+        prods: products,
+        pageTitle: 'Shop',
+        path: '/'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getCart = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items;
+      res.render('shop/cart', {
+        path: '/cart',
+        pageTitle: 'Your Cart',
+        products: products
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCart = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.findById(prodId)
+    .then(product => {
+      return req.user.addToCart(product);
+    })
+    .then(result => {
+      console.log(result);
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCartDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  req.user
+    .removeFromCart(prodId)
+    .then(result => {
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postOrder = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items.map(i => {
+        return { quantity: i.quantity, product: { ...i.productId._doc } };
+      });
+      const order = new Order({
+        user: {
+          email: req.user.email,
+          userId: req.user
+        },
+        products: products
+      });
+      return order.save();
+    })
+    .then(result => {
+      return req.user.clearCart();
+    })
+    .then(() => {
+      res.redirect('/orders');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getOrders = (req, res, next) => {
+  Order.find({ 'user.userId': req.user._id })
+    .then(orders => {
+      res.render('shop/orders', {
+        path: '/orders',
+        pageTitle: 'Your Orders',
+        orders: orders
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getInvoice = (req, res, next) => {
+  const orderId = req.params.orderId; 
+  Order.findById(orderId)
+    .then(order => { 
+      if (!order) { 
+        return next(new Error('No order found.'));
+      }
+      if(order.user.userId.toString() !== req.user._id.toString()) { 
+        return next(new Error('Unauthorized'));
+      } 
+      const invoiceName = 'invoice-' + orderId + '.pdf';
+      const invoicePath = path.join('data', 'invoices', invoiceName);
+
+      const pdfDoc = new PDFDocument();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition', 
+        'inline; filename="' + invoiceName +'"'
+      ); 
+      pdfDoc.pipe(fs.createWriteStream(invoicePath)); 
+      pdfDoc.pipe(res); 
+
+      pdfDoc.fontSize(26).text('Invoice', { // font size for this row will be 26
+        underline: true
+      }); 
+      pdfDoc.text('------------------------');
+      let totalPrice = 0;
+      order.products.forEach(prod => { // looping through products from this order
+        totalPrice += prod.quantity * prod.product.price;
+        pdfDoc
+          .fontSize(14)
+          .text(
+            prod.product.title + 
+            ' - ' + 
+            prod.quantity + 
+            ' x ' + 
+            '$' + 
+            prod.product.price
+          ); 
+      });
+      pdfDoc.text('---');
+      pdfDoc.fontSize(20).text('Total Price: $' + totalPrice);
+
+      pdfDoc.end(); 
+      // fs.readFile(invoicePath, (err, data) => {
+      //   if(err) {
+      //   return next(err);
+      //   }
+      //   res.setHeader('Content-Type', 'application/pdf');
+      //   res.setHeader(
+      //     'Content-Disposition', 
+      //     'inline; filename="' + invoiceName +'"'
+      //     ); 
+      //   res.send(data);
+      // }); 
+      // const file = fs.createReadStream(invoicePath); 
+      
+      // file.pipe(res); 
+  })
+  .catch(err => next(err));
+};
+
+
+
+
+// 329. Deleting Files
+
+// /util/file.js
+
+const fs = require('fs');
+
+const deleteFile = (filePath) => {
+    fs.unlink(filePath, (err) => { // this will delete file from the 'filePath'
+        if (err) {
+            throw (err);
+        }
+    });
+}
+
+exports.deleteFile = deleteFile;
+
+
+// /controllers/admin.js
+
+const mongoose = require('mongoose');
+
+const fileHelper = require('../util/file'); // importing it from 'util' folder
+
+const { validationResult } = require('express-validator/check');
+
+const Product = require('../models/product');
+
+exports.getAddProduct = (req, res, next) => {
+  res.render('admin/edit-product', {
+    pageTitle: 'Add Product',
+    path: '/admin/add-product',
+    editing: false,
+    hasError: false,
+    errorMessage: null,
+    validationErrors: []
+  });
+};
+
+exports.postAddProduct = (req, res, next) => {
+  const title = req.body.title;
+  const image = req.file;
+  const price = req.body.price;
+  const description = req.body.description;
+  if (!image) { 
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Add Product',
+      path: '/admin/add-product',
+      editing: false,
+      hasError: true,
+      product: {
+        title: title,
+        price: price,
+        description: description
+      },
+      errorMessage: 'Attached file is not an image.',
+      validationErrors: []
+    });
+  }
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    console.log(errors.array());
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Add Product',
+      path: '/admin/add-product',
+      editing: false,
+      hasError: true,
+      product: {
+        title: title,
+        imageUrl: imageUrl,
+        price: price,
+        description: description
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  const imageUrl = image.path; 
+
+  const product = new Product({
+    // _id: new mongoose.Types.ObjectId('5c4ad9963b8f0c27b867d18f'),
+    title: title,
+    price: price,
+    description: description,
+    imageUrl: imageUrl, 
+    userId: req.user
+  });
+  product
+    .save()
+    .then(result => {
+      // console.log(result);
+      console.log('Created Product');
+      res.redirect('/admin/products');
+    })
+    .catch(err => {
+      // return res.status(500).render('admin/edit-product', {
+      //   pageTitle: 'Add Product',
+      //   path: '/admin/add-product',
+      //   editing: false,
+      //   hasError: true,
+      //   product: {
+      //     title: title,
+      //     imageUrl: imageUrl,
+      //     price: price,
+      //     description: description
+      //   },
+      //   errorMessage: 'Database operation failed, please try again.',
+      //   validationErrors: []
+      // });
+      // res.redirect('/500');
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getEditProduct = (req, res, next) => {
+  const editMode = req.query.edit;
+  if (!editMode) {
+    return res.redirect('/');
+  }
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      if (!product) {
+        return res.redirect('/');
+      }
+      res.render('admin/edit-product', {
+        pageTitle: 'Edit Product',
+        path: '/admin/edit-product',
+        editing: editMode,
+        product: product,
+        hasError: false,
+        errorMessage: null,
+        validationErrors: []
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postEditProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  const updatedTitle = req.body.title;
+  const updatedPrice = req.body.price;
+  const image = req.file; 
+  const updatedDesc = req.body.description;
+
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(422).render('admin/edit-product', {
+      pageTitle: 'Edit Product',
+      path: '/admin/edit-product',
+      editing: true,
+      hasError: true,
+      product: {
+        title: updatedTitle,
+        price: updatedPrice,
+        description: updatedDesc,
+        _id: prodId
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array()
+    });
+  }
+
+  Product.findById(prodId)
+    .then(product => {
+      if (product.userId.toString() !== req.user._id.toString()) {
+        return res.redirect('/');
+      }
+      product.title = updatedTitle;
+      product.price = updatedPrice;
+      product.description = updatedDesc;
+      if(image) { 
+        fileHelper.deteleFile(product.imageUrl); // here we are deleting the old image as we can see(i guess)
+        product.imageUrl = image.path; 
+      }
+      return product.save().then(result => {
+        console.log('UPDATED PRODUCT!');
+        res.redirect('/admin/products');
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getProducts = (req, res, next) => {
+  Product.find({ userId: req.user._id })
+    // .select('title price -_id')
+    // .populate('userId', 'name')
+    .then(products => {
+      console.log(products);
+      res.render('admin/products', {
+        prods: products,
+        pageTitle: 'Admin Products',
+        path: '/admin/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.findById(prodId)
+    .then(product => {
+      if (!product) {
+        return next(new Error('Product not found.'));
+      }
+      fileHelper.deleteFile(product.imageUrl); // here as well we are deleting the image from file system
+      return Product.deleteOne({ _id: prodId, userId: req.user._id });
+    })
+    .then(() => {
+      console.log('DESTROYED PRODUCT');
+      res.redirect('/admin/products');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+
+
+
+// 334. Adding Pagination Links
+
+
+
+
+// 335. Retrieving a Chunk of Data
+
+// /controllers/shop.js
+
+const fs = require('fs'); 
+const path = require('path'); 
+
+const PDFDocument = require('pdfkit'); 
+
+const Product = require('../models/product');
+const Order = require('../models/order');
+
+const ITEMS_PER_PAGE = 2; // items that will display on the page
+
+exports.getProducts = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      console.log(products);
+      res.render('shop/product-list', {
+        prods: products,
+        pageTitle: 'All Products',
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getProduct = (req, res, next) => {
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      res.render('shop/product-detail', {
+        product: product,
+        pageTitle: product.title,
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getIndex = (req, res, next) => {
+  const page = req.query.page; // store the query of the page which is take from the url from views
+  Product.find()
+    .skip((page - 1) * ITEMS_PER_PAGE) // this will skip this amount of products
+    .limit(ITEMS_PER_PAGE) // this will limit to this amount of products
+    .then(products => {
+      res.render('shop/index', {
+        prods: products,
+        pageTitle: 'Shop',
+        path: '/'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getCart = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items;
+      res.render('shop/cart', {
+        path: '/cart',
+        pageTitle: 'Your Cart',
+        products: products
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCart = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.findById(prodId)
+    .then(product => {
+      return req.user.addToCart(product);
+    })
+    .then(result => {
+      console.log(result);
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCartDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  req.user
+    .removeFromCart(prodId)
+    .then(result => {
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postOrder = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items.map(i => {
+        return { quantity: i.quantity, product: { ...i.productId._doc } };
+      });
+      const order = new Order({
+        user: {
+          email: req.user.email,
+          userId: req.user
+        },
+        products: products
+      });
+      return order.save();
+    })
+    .then(result => {
+      return req.user.clearCart();
+    })
+    .then(() => {
+      res.redirect('/orders');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getOrders = (req, res, next) => {
+  Order.find({ 'user.userId': req.user._id })
+    .then(orders => {
+      res.render('shop/orders', {
+        path: '/orders',
+        pageTitle: 'Your Orders',
+        orders: orders
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getInvoice = (req, res, next) => {
+  const orderId = req.params.orderId; 
+  Order.findById(orderId)
+    .then(order => { 
+      if (!order) { 
+        return next(new Error('No order found.'));
+      }
+      if(order.user.userId.toString() !== req.user._id.toString()) { 
+        return next(new Error('Unauthorized'));
+      } 
+      const invoiceName = 'invoice-' + orderId + '.pdf';
+      const invoicePath = path.join('data', 'invoices', invoiceName);
+
+      const pdfDoc = new PDFDocument();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition', 
+        'inline; filename="' + invoiceName +'"'
+      ); 
+      pdfDoc.pipe(fs.createWriteStream(invoicePath)); 
+      pdfDoc.pipe(res); 
+
+      pdfDoc.fontSize(26).text('Invoice', { 
+        underline: true
+      }); 
+      pdfDoc.text('------------------------');
+      let totalPrice = 0;
+      order.products.forEach(prod => { 
+        totalPrice += prod.quantity * prod.product.price;
+        pdfDoc
+          .fontSize(14)
+          .text(
+            prod.product.title + 
+            ' - ' + 
+            prod.quantity + 
+            ' x ' + 
+            '$' + 
+            prod.product.price
+          ); 
+      });
+      pdfDoc.text('---');
+      pdfDoc.fontSize(20).text('Total Price: $' + totalPrice);
+
+      pdfDoc.end(); 
+      // fs.readFile(invoicePath, (err, data) => {
+      //   if(err) {
+      //   return next(err);
+      //   }
+      //   res.setHeader('Content-Type', 'application/pdf');
+      //   res.setHeader(
+      //     'Content-Disposition', 
+      //     'inline; filename="' + invoiceName +'"'
+      //     ); 
+      //   res.send(data);
+      // }); 
+      // const file = fs.createReadStream(invoicePath); 
+      
+      // file.pipe(res); 
+  })
+  .catch(err => next(err));
+};
+
+
+
+
+// 337. Preparing Pagination Data on the Server
+
+// /controllers/shop.js
+
+const fs = require('fs'); 
+const path = require('path'); 
+
+const PDFDocument = require('pdfkit'); 
+
+const Product = require('../models/product');
+const Order = require('../models/order');
+
+const ITEMS_PER_PAGE = 2; 
+
+exports.getProducts = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      console.log(products);
+      res.render('shop/product-list', {
+        prods: products,
+        pageTitle: 'All Products',
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getProduct = (req, res, next) => {
+  const prodId = req.params.productId;
+  Product.findById(prodId)
+    .then(product => {
+      res.render('shop/product-detail', {
+        product: product,
+        pageTitle: product.title,
+        path: '/products'
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getIndex = (req, res, next) => {
+  const page = req.query.page; 
+  let totalItems;
+
+  Product.find()
+    .countDocuments() // count all the documents
+    .then(numProducts => {
+      totalItems = numProducts; // here we have total items
+      return Product.find()
+        .skip((page - 1) * ITEMS_PER_PAGE) 
+        .limit(ITEMS_PER_PAGE);
+  })
+  .then(products => {
+    res.render('shop/index', {
+      prods: products,
+      pageTitle: 'Shop',
+      path: '/',
+      totalItems: totalItems,
+      hasNextPage: ITEMS_PER_PAGE * page < totalItems, // we are looking to see if we have a next page
+      hasPreviousPage: page > 1, // if we have a previous page
+      nextPage: page + 1, 
+      previousPage: page - 1,
+      lastPage: Math.ceil(totalItems / ITEMS_PER_PAGE) // here we are looking to see which is the last page
+    });
+  })
+  .catch(err => {
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error);
+  });
+};
+
+exports.getCart = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items;
+      res.render('shop/cart', {
+        path: '/cart',
+        pageTitle: 'Your Cart',
+        products: products
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCart = (req, res, next) => {
+  const prodId = req.body.productId;
+  Product.findById(prodId)
+    .then(product => {
+      return req.user.addToCart(product);
+    })
+    .then(result => {
+      console.log(result);
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postCartDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId;
+  req.user
+    .removeFromCart(prodId)
+    .then(result => {
+      res.redirect('/cart');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.postOrder = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items.map(i => {
+        return { quantity: i.quantity, product: { ...i.productId._doc } };
+      });
+      const order = new Order({
+        user: {
+          email: req.user.email,
+          userId: req.user
+        },
+        products: products
+      });
+      return order.save();
+    })
+    .then(result => {
+      return req.user.clearCart();
+    })
+    .then(() => {
+      res.redirect('/orders');
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getOrders = (req, res, next) => {
+  Order.find({ 'user.userId': req.user._id })
+    .then(orders => {
+      res.render('shop/orders', {
+        path: '/orders',
+        pageTitle: 'Your Orders',
+        orders: orders
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+exports.getInvoice = (req, res, next) => {
+  const orderId = req.params.orderId; 
+  Order.findById(orderId)
+    .then(order => { 
+      if (!order) { 
+        return next(new Error('No order found.'));
+      }
+      if(order.user.userId.toString() !== req.user._id.toString()) { 
+        return next(new Error('Unauthorized'));
+      } 
+      const invoiceName = 'invoice-' + orderId + '.pdf';
+      const invoicePath = path.join('data', 'invoices', invoiceName);
+
+      const pdfDoc = new PDFDocument();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition', 
+        'inline; filename="' + invoiceName +'"'
+      ); 
+      pdfDoc.pipe(fs.createWriteStream(invoicePath)); 
+      pdfDoc.pipe(res); 
+
+      pdfDoc.fontSize(26).text('Invoice', { 
+        underline: true
+      }); 
+      pdfDoc.text('------------------------');
+      let totalPrice = 0;
+      order.products.forEach(prod => { 
+        totalPrice += prod.quantity * prod.product.price;
+        pdfDoc
+          .fontSize(14)
+          .text(
+            prod.product.title + 
+            ' - ' + 
+            prod.quantity + 
+            ' x ' + 
+            '$' + 
+            prod.product.price
+          ); 
+      });
+      pdfDoc.text('---');
+      pdfDoc.fontSize(20).text('Total Price: $' + totalPrice);
+
+      pdfDoc.end(); 
+      // fs.readFile(invoicePath, (err, data) => {
+      //   if(err) {
+      //   return next(err);
+      //   }
+      //   res.setHeader('Content-Type', 'application/pdf');
+      //   res.setHeader(
+      //     'Content-Disposition', 
+      //     'inline; filename="' + invoiceName +'"'
+      //     ); 
+      //   res.send(data);
+      // }); 
+      // const file = fs.createReadStream(invoicePath); 
+      
+      // file.pipe(res); 
+  })
+  .catch(err => next(err));
+};
+
+
+
+
+// 338. Adding Dynamic Pagination Buttons
+
+// /controllers/shop.js
+
+exports.getIndex = (req, res, next) => {
+  const page = +req.query.page || 1; // if we accessing for example localhost without any query params there
+  let totalItems;
+
+  Product.find()
+    .countDocuments() 
+    .then(numProducts => {
+      totalItems = numProducts; 
+      return Product.find()
+        .skip((page - 1) * ITEMS_PER_PAGE) 
+        .limit(ITEMS_PER_PAGE);
+  })
+  .then(products => {
+    res.render('shop/index', {
+      prods: products,
+      pageTitle: 'Shop',
+      path: '/',
+      currentPage: page,
+      hasNextPage: ITEMS_PER_PAGE * page < totalItems, 
+      hasPreviousPage: page > 1, 
+      nextPage: page + 1, 
+      previousPage: page - 1,
+      lastPage: Math.ceil(totalItems / ITEMS_PER_PAGE) 
+    });
+  })
+  .catch(err => {
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error);
+  });
+};
+
+
+
+
+// 339. Re-Using the Pagination Logic Controls
+
+
+
+
+// 343. What aer Asynchronous Requests
+
+
+
+
+// 344. Adding Client Side JS Code
+
+// /views/admin/products.ejs
+
+// <%- include('../includes/head.ejs') %>
+//     <link rel="stylesheet" href="/css/product.css">
+//     </head>
+
+//     <body>
+//         <%- include('../includes/navigation.ejs') %>
+
+//             <main>
+//                 <% if (prods.length > 0) { %>
+//                     <div class="grid">
+//                         <% for (let product of prods) { %>
+//                             <article class="card product-item">
+//                                 <header class="card__header">
+//                                     <h1 class="product__title">
+//                                         <%= product.title %>
+//                                     </h1>
+//                                 </header>
+//                                 <div class="card__image">
+//                                     <img src="/<%= product.imageUrl %>" alt="<%= product.title %>">
+//                                 </div>
+//                                 <div class="card__content">
+//                                     <h2 class="product__price">$
+//                                         <%= product.price %>
+//                                     </h2>
+//                                     <p class="product__description">
+//                                         <%= product.description %>
+//                                     </p>
+//                                 </div>
+//                                 <div class="card__actions">
+//                                     <a href="/admin/edit-product/<%= product._id %>?edit=true" class="btn">Edit</a>
+//                                     <input type="hidden" value="<%= product._id %>" name="productId">
+//                                     <input type="hidden" name="_csrf" value="<%= csrfToken %>"> 
+//                                     <button class="btn" type="button" onclick="deleteProduct(this)">Delete</button> // here on click it will happen what is on the deleteProduct() function (this will return that button and will help us to read other values from the DOM)
+//                                 </div>
+//                             </article>
+//                             <% } %>
+//                     </div>
+//                     <% } else { %>
+//                         <h1>No Products Found!</h1>
+//                         <% } %>
+//             </main>
+//             <%- include('../includes/end.ejs') %>
+//             <script src="/js/admin.js"></script> // imporing js script in the static way
+
+
+// /public/js/admin.js
+
+const deleteProduct = (btn) => {
+  const proId = btn.parentNode.querySelector('[name=productId]').value; // we are reaching the parentNode of this button, which was clicked and after that we are looking to see which child of that parentNode has that attribute and after that we are storing his value in this variable
+  const csrf = btn.parentNode.querySelector('[name=_csrf]').value;
+};
+
+
+
+
+// 346. Sending Handling Background Requests
+
+// /routes/admin.js
+
+const path = require('path');
+
+const express = require('express');
+const { body } = require('express-validator/check');
+
+const adminController = require('../controllers/admin');
+const isAuth = require('../middleware/is-auth');
+
+const router = express.Router();
+
+// /admin/add-product => GET
+router.get('/add-product', isAuth, adminController.getAddProduct);
+
+// /admin/products => GET
+router.get('/products', isAuth, adminController.getProducts);
+
+// /admin/add-product => POST
+router.post(
+  '/add-product',
+  [
+    body('title')
+      .isString()
+      .isLength({ min: 3 })
+      .trim(),
+    body('price').isFloat(),
+    body('description')
+      .isLength({ min: 5, max: 400 })
+      .trim()
+  ],
+  isAuth,
+  adminController.postAddProduct
+);
+
+router.get('/edit-product/:productId', isAuth, adminController.getEditProduct);
+
+router.post(
+  '/edit-product',
+  [
+    body('title')
+      .isString()
+      .isLength({ min: 3 })
+      .trim(),
+    body('price').isFloat(),
+    body('description')
+      .isLength({ min: 5, max: 400 })
+      .trim()
+  ],
+  isAuth,
+  adminController.postEditProduct
+);
+
+router.delete('/product/:productId', isAuth, adminController.deleteProduct); // here we are using the delete method to delete the product with that id which we will send throug the views
+
+module.exports = router;
+
+
+// /controllers/admin.js
+
+exports.deleteProduct = (req, res, next) => {
+  const prodId = req.params.productId; // extracting the id from params
+  Product.findById(prodId)
+    .then(product => {
+      if (!product) {
+        return next(new Error('Product not found.'));
+      }
+      fileHelper.deleteFile(product.imageUrl); 
+      return Product.deleteOne({ _id: prodId, userId: req.user._id });
+    })
+    .then(() => {
+      console.log('DESTROYED PRODUCT');
+      res.status(200).json({ message: 'Success!' }); // sending a JSON response if worked with status code
+    })
+    .catch(err => {
+      res.status(500).json({ message: 'Deleting product failed!' }); // and also if not work as well JSON with status code
+    });
+};
+
+
+// /public/js/admin.js
+
+const deleteProduct = (btn) => {
+  const prodId = btn.parentNode.querySelector('[name=productId]').value;
+  const csrf = btn.parentNode.querySelector('[name=_csrf]').value;
+
+  fetch('/admin/product/' + prodId, { // with fetch we can send data as well
+    method: 'DELETE', // this is the method
+    headers: { 
+      'csrf-token': csrf // in the header we are sending the csrf-token
+    }
+  })
+    .then(result => {
+      console.log(result);
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
+
+
+
+
+// 347. Manipulating the DOM
+
+// /public/js/admin.js
+
+const deleteProduct = (btn) => {
+  const prodId = btn.parentNode.querySelector('[name=productId]').value;
+  const csrf = btn.parentNode.querySelector('[name=_csrf]').value;
+
+  const productElement = btn.closest('article'); // from the btn(which we are pressing to delete an item ) it will look for the 'closest' element which is an 'article'
+
+  fetch('/admin/product/' + prodId, {
+    method: 'DELETE', 
+    headers: { 
+      'csrf-token': csrf 
+    }
+  })
+    .then(result => {
+      return result.json();
+    })
+    .then(data => {
+      console.log(data);
+      productElement.parentNode.removeChild(productElement); 
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
+
+
+
+
+// 350. How Payments Work
+
+
+
+
+// 351. Adding a Checkout Page
+
+// /routes/shop.js
+
+router.get('/checkout', isAuth, shopController.getCheckout);
+
+// /controllers/shop.js
+
+exports.getCheckout = (req, res, next) => {
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items;
+      let total = 0;
+      products.forEach(p => {
+        total += p.quantity * p.productId.price;
+      });
+      res.render('shop/checkout', {
+        path: '/checkout',
+        pageTitle: 'Checkout',
+        products: products, 
+        totalSum: total
+      });
+    })
+    .catch(err => {
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
+    });
+};
+
+
+
+
+// 452. Using Stripe in Your App
+
+// npm install --save stripe   // this install stripe which will help us to handle money in some way
+
+// we used stripe just to see how it's working, if you wanna see and learn more rewatch the videos
+
+
+
+
+// 355. What are REST APIs and why do we use Them
