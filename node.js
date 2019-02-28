@@ -214,7 +214,7 @@ const server = http.createServer((req, res) => {
       const parsedBody = Buffer.concat(body).toString();
       const message = parsedBody.split('=')[1];
       fs.writeFileSync('message.txt', message);
-      res.statusCode = 302;  // and to be better we moved these 3 lines of code here in this block cause is the right way to do it(check again this chapter)
+      res.statusCode = 302;  // and to be better we moved these 3 lines of code here in this block cause is the right way to do it(cause this is async code, so this code will be execute in some way in the 'future', not right away)
       res.setHeader('Location', '/');
       return res.end()  
     });
@@ -394,7 +394,9 @@ exports = requestHandler;
 
 npm init // it will initialize our application so we will can bring node modules and personalize some commands as we can see above in the last lecture
 
-npm install <module_name> --save-dev // it will install that module in a production way, which means the module will be install just where the application it is in computer, and it will upload the package.json on 'devDependencies' about that module
+npm install <module_name> --save // this will install the module as a production dependency and will upload the package.json on "dependencies" about the module
+
+npm install <module_name> --save-dev // it will install that module in a developement(during development way, which means the module will be install just where the application it is in computer, and it will upload the package.json on 'devDependencies' about that module
 
 npm install -g <module_name> // it will install that module globally on our machine(the npm official page recomand this )
 
@@ -2812,7 +2814,7 @@ exports.postAddProduct = (req, res, next) => {
 };
 
 exports.getEditProduct = (req, res, next) => {
-  const editMode = req.query.edit; // if we have the 'edit' query param in the 'URL' we will alocate to editMode like this 'http://localhost:3000/admin/edit-product/123245?edit=true'
+  const editMode = req.query.edit; // if we have the 'edit' query param in the 'URL' we will alocate to editMode like this 'http://localhost:3000/admin/edit-product/123245?edit=true', (if there is 'true', we will have it like string, not like a boolean)
   if(!editMode) {
     return res.redirect('/');
   }
@@ -5589,10 +5591,10 @@ exports.getEditProduct = (req, res, next) => {
   }
   const prodId = req.params.productId;
   req.user
-    .getProducts({where: {id: prodId}}) // here as well we want to edit the product just for the 'user' which was set up in the req.user, and it will return just the products which were created by the 'user'
+    .getProducts({where: {id: prodId}}) // here as well we want to edit the product just for the 'user' which was set up in the req.user, and it will return just the products which were created by the 'user', the sequelize give us the options to use "get'Products'" cause a 'Product'(s)' belongs to a 'User' and here is the magic of the sequelize
     // Product.findByPk(prodId) 
     .then(products => {
-      const product = products[0];
+      const product = products[0]; // here we are getting the first element from that array(which was 'product' till now)
       if (!product) {
         return res.redirect('/');
       }
@@ -6952,8 +6954,8 @@ const getDb = () => {
   throw 'No database found!';
 };
 
-exports.mongoConnect = mongoConnect; // connecting and then storing the connection to database and this keep on running 
-exports.getDb = getDb; // return access to that connect the database if it exists and mongodb it provides sufficent connections for multiple simultaneous interactions with the database
+exports.mongoConnect = mongoConnect; // connecting and then storing the connection to database and this keep on running (this is starting the connection to the database(which means that if we use this one everytime it will create a new connection for every use, which we don't want)
+exports.getDb = getDb; // return access to that connect the database if it exists and mongodb it provides sufficent connections for multiple simultaneous interactions with the database(this simple allow us to access the database without creating a new connection everytime we are using the database)
 
 
 // /models/product.js
@@ -7287,7 +7289,7 @@ class Product {
     const db = getDb();
     return db
       .collection('products')
-      .find()
+      .find() 
       .toArray()
       .then(products => {
         console.log(products);
@@ -7517,8 +7519,8 @@ class Product {
     const db = getDb();
     return db
       .collection('products') // in the collection 'products'
-      .find({_id: new mongodb.ObjectId(prodId) }) // in mongodb the id is stored as '_id', in mongodb as well we don't have js objects, that's why we have to translate that to js in some way 'new mongodb.ObjectId(prodId)' just if we are donig this it will fetch that id that we want
-      .next()
+      .find({_id: new mongodb.ObjectId(prodId) }) // in mongodb the id is stored as '_id', in mongodb as well we don't have js objects, that's why we have to translate that to js in some way 'new mongodb.ObjectId(prodId)' just if we are doing this it will fetch that id that we want
+      .next() // the find also will return a cursor as a lecture before(for all fetch product) so here we have to use .next() in order to go to the other document
       .then(product => {
         console.log(product);
         return product;
@@ -11857,6 +11859,8 @@ exports.postLogin = (req, res, next) => {
   res.redirect('/');
 }; 
 
+// this session cookie is saved across requests but not across users
+
 
 
 
@@ -11871,7 +11875,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const session = require('express-session');
-const MongoDBStore = require('connect-mongodb-session')(session); // importing connect-mongodb-session which will give us a function and we will pass the session as argument to that function
+const MongoDBStore = require('connect-mongodb-session')(session); // importing connect-mongodb-session which will give us a function and we will pass the session(express-session which imported a line above) as argument to that function
 
 const errorController = require('./controllers/error');
 const User = require('./models/user');
@@ -12121,8 +12125,8 @@ exports.postLogin = (req, res, next) => {
 }; 
 
 exports.postLogout = (req, res, next) => {
- req.session.destroy((err) => {  // this will destroy the session 
-  console.log(err);
+ req.session.destroy((err) => {  // this will destroy the session(destroy is from the session packege that we are using)
+  console.log(err); // here we are conosle any error that can occur
   res.redirect('/');
  });
 }; 
@@ -12132,10 +12136,14 @@ exports.postLogout = (req, res, next) => {
 
 // 240. Fixing Some Minor Bugs
 
+// Without a valid session, the middlewares which used information from the session will not work
 
 
 
 // 241. Making Add to Cart Work Again
+
+// with the session we are not fetching the user model as we did before when the mongoose gave us the user model in every req(request), the session is giving us just the information about the user, not the user model 
+// and to solve this problem we we'll do almost we did before 
 
 // app.js
 
@@ -12178,12 +12186,12 @@ app.use(
 );
 
 app.use((req, res, next) => {
-  if(!req.session.user){ // if there is no 'user' it will execute the next middleware
+  if(!req.session.user){ // if there is no 'user' it will execute the next middleware(it will not give us an error if there is not a session)
     return next();
   }
   User.findById(req.session.user._id) // here the id of the user we are taking it from session
     .then(user => {
-      req.user = user;
+      req.user = user; // here we're getting a mongoose user(with all the methods that user model has)
       next();
     })
     .catch(err => console.log(err)); 
@@ -12217,11 +12225,67 @@ mongoose
   });
 
 
+// /controllers/shop.js
+
+exports.getCart = (req, res, next) => {
+  req.user // here we are using the 'user' from 'req.user' because we are executing some methods on the 'user mode', and we are doing this everywhere we need to implement this
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items;
+      res.render('shop/cart', {
+        path: '/cart',
+        pageTitle: 'Your Cart',
+        products: products,
+        isAuthenticated: req.session.isLoggedIn
+      });
+    })
+    .catch(err => console.log(err));
+};
+
+// /controllers/admin.js
+
+exports.postAddProduct = (req, res, next) => {
+  const title = req.body.title;
+  const imageUrl = req.body.imageUrl;
+  const price = req.body.price;
+  const description = req.body.description;
+  const product = new Product({
+    title: title,
+    price: price,
+    description: description,
+    imageUrl: imageUrl,
+    userId: req.user // and here as well
+  });
+  product
+    .save()
+    .then(result => {
+      // console.log(result);
+      console.log('Created Product');
+      res.redirect('/admin/products');
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
 
 
 // 242. Two Tiny Improvments
 
+// /controllers/auth.js
 
+exports.postLogin = (req, res, next) => {
+  User.findById('5bab316ce0a7c75f783cb8a8')
+    .then(user => {
+      req.session.isLoggedIn = true;
+      req.session.user = user;
+      req.session.save(err => { // here we are saving the session in the database and just after that we are redirecting
+        console.log(err);
+        res.redirect('/');
+      });
+    })
+    .catch(err => console.log(err));
+};
 
 
 // 247. What is Authentication
@@ -12231,6 +12295,7 @@ mongoose
 
 // 248. How is Authentication Implemented
 
+// we are creating a session after the user is authenticated for that user
 
 
 
@@ -12562,10 +12627,10 @@ exports.postLogin = (req, res, next) => {
       }
       bcrypt
         .compare(password, user.password) // here we are comparing the 'password' from frontend with the 'user.password' from database which is hashed by brcrypt with an algoritm
-        .then(doMatch => {
+        .then(doMatch => { // this will give us true or false
           if(doMatch) { // here we are retriving the answer
-            req.session.isLoggedIn = true; // creating and everything
-            req.session.user = user;
+            req.session.isLoggedIn = true; // creating the session with the loggedIn
+            req.session.user = user; // and storing the 'user' in the session
             return req.session.save(err => { //save the session
               console.log(err);
               return res.redirect('/'); // return to the home page
@@ -12575,7 +12640,7 @@ exports.postLogin = (req, res, next) => {
         })
         .catch(err => {
           console.log(err);
-          res.redirect('/login');
+          res.redirect('/login'); // we redirect even if we have an error
         }); 
     })
     .catch(err => console.log(err));
@@ -12626,7 +12691,8 @@ exports.postLogout = (req, res, next) => {
 const Product = require('../models/product');
 
 exports.getAddProduct = (req, res, next) => {
-  if(!req.session.isLoggedIn) {
+  if(!req.session.isLoggedIn) { // here we are checking in the request session if there is not a login 'user'
+
     return res.redirect('/login'); // if there is no user logged in we are redirecting to to 'login' page, but this is not a scalable way because we to do it for every controller action
   }
   res.render('admin/edit-product', {
@@ -12740,7 +12806,7 @@ exports.postDeleteProduct = (req, res, next) => {
 
 module.exports = (req, res, next) => {
   if (!req.session.isLoggedIn) {
-      return res.redirect('/login'); // here we are checking to see if there the user is logged in through a middleware
+      return res.redirect('/login'); // here we are checking to see if there the user is logged in through a middleware (we are doing this checking in the request session)
   }
   next();
 }
@@ -12760,7 +12826,7 @@ const router = express.Router();
 router.get('/add-product', isAuth, adminController.getAddProduct); // funnel the request through the auth middleware first and after that to our controller
 
 // /admin/products => GET
-router.get('/products', isAuth, adminController.getProducts);
+router.get('/products', isAuth, adminController.getProducts); // this happens from left to right to any route
 
 // /admin/add-product => POST
 router.post('/add-product', isAuth, adminController.postAddProduct);
@@ -12903,7 +12969,7 @@ exports.getIndex = (req, res, next) => {
         pageTitle: 'Shop',
         path: '/',
         isAuthenticated: req.session.isLoggedIn,
-        csrfToken: req.csrfToken() // this will generate a csrfToken, and we can use this on the views
+        csrfToken: req.csrfToken() // this will generate a csrfToken, and we will use this on the views
       });
     })
     .catch(err => {
@@ -13145,8 +13211,9 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
   res.locals.isAuthenticated = req.session.isLoggedIn; // this allow us to set local variables that are passed into the views and they only exist in the views which are render and here we puth req.session.isLoggedIn
-  res.locals.csrfToken = req.csrfToken(); // and here we assing the req.csrfToken()
+  res.locals.csrfToken = req.csrfToken(); // and here we assing the req.csrfToken() (this means that the token it will be the same with that one which is generated by the backend) this is the same token
   next(); // the '_csrf' Token should be send with every POST request from the views
+ <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 });
 
 app.use('/admin', adminRoutes);
@@ -13218,8 +13285,8 @@ app.use(
     store: store
   })
 );
-app.use(csrfProtection); 
-app.use(flash()); // initialize flash (connect-flash)
+app.use(csrfProtection); // we have to inialize it after we set the session (so this is the good place for both initizations)
+app.use(flash()); // initialize flash (connect-flash) we have to inialize it after we set the session
 
 app.use((req, res, next) => {
   if(!req.session.user){ 
@@ -13344,6 +13411,10 @@ exports.postLogout = (req, res, next) => {
 };
 
 
+<% if(errorMessage) { %> // in case that there is an error message we will display that, if not we will not
+   <div><%= errorMessage %></div>
+<% } %>
+
 
 
 // 261. Optional Styling Error Messages
@@ -13364,7 +13435,7 @@ exports.getLogin = (req, res, next) => {
   if(message.length > 0) { // if the length of the array is bigger than 0
     mesasge = message[0]; // message is equal with the first element of that array
   } else {
-    message = null; // if not the message will be equal with 0
+    message = null; // if not the message will be equal with null
   }
   res.render('auth/login', {
     path: '/login',
@@ -13735,7 +13806,7 @@ exports.getReset = (req, res, next) => { // for resetting the password
   });
 }
 
-
+// we also add a route and a view for this controller 
 
 
 // 274. Implementing the Token Logic
@@ -13755,7 +13826,7 @@ const userSchema = new Schema({
     type: String,
     required: true
   },
-  resetToken: String, // the token for resetting password
+  resetToken: String, // the token for resetting password both of them should not be required cause we don't use them just sometimes
   resetTokenExpiration: Date, // the date when the token will expire
   cart: {
     items: [
@@ -13812,7 +13883,7 @@ module.exports = mongoose.model('User', userSchema);
 
 // /controllers/auth.js
 
-const crypto = require('crypto'); // module supports cryptography, it's a node built-in module
+const crypto = require('crypto'); // module supports cryptography, it's a node built-in module(help us to create tokens)
 
 const bcrypt = require('bcryptjs'); 
 const nodemailer = require('nodemailer'); 
@@ -13957,12 +14028,12 @@ exports.postReset = (req, res, next) => {
     const token = buffer.toString('hex'); // this token will contain that buffer which is converted to string (ASCII) from an hexadecimal
     User.findOne({email: req.body.email})  // finding in the database the user which have the email we want to change
       .then(user => {
-        if(!user) {
+        if(!user) { // if there we don't have a user with that mail we flash the message bellow
           req.flash('error', 'No account with that email found.');
           return res.redirect('/reset');
         }
-        user.resetToken = token; // token which was generated
-        user.resetTokenExpiration = Date.now() + 3600000; // one hour in milliseconds
+        user.resetToken = token; // token which was generated we add to the find user
+        user.resetTokenExpiration = Date.now() + 3600000; // one hour in milliseconds add to the user...
         return user.save(); // saving into the database
       })
       .then(result => {
@@ -13988,7 +14059,7 @@ exports.postReset = (req, res, next) => {
 
 // 275. Creating the Token 
 
-
+// adding the post route for reset and sending a mail to a user to see if the token is generating properly
 
 
 // 276. Creating the Reset Password Form
@@ -14171,7 +14242,7 @@ exports.postReset = (req, res, next) => {
 exports.getNewPassword = (req, res, next) => {
   const token = req.params.token; // take the tokem from the params request
   User.findOne({ resetToken: token, resetTokenExpiration: { $gt: Date.now() } })
-    .then(user => { // find the user with the right token in the database and see if the token hasn't expire yet
+    .then(user => { // find the user with the right token in the database and see if the token hasn't expire yet 
       let message = req.flash('error');
       if (message.length > 0) {
         message = message[0];
@@ -14182,7 +14253,7 @@ exports.getNewPassword = (req, res, next) => {
         path: '/new-password',
         pageTitle: 'New Password',
         errorMessage = message,
-        userId: user._id.toString()
+        userId: user._id.toString() // giving to the view the user id converted to string to not be a mongdb object id
       });
     })
     .catch(err => {
@@ -14425,7 +14496,7 @@ exports.postNewPassword = (req, res, next) => {
 
 // 278. Why we Need Authorization
 
-
+// not every user has the right to do everything, authorization means that we are restricting  the permissions of a loggedin user, (he will cannot delete products which are not created by him)
 
 
 // 279. Adding Authorization
@@ -20179,3 +20250,1755 @@ exports.getCheckout = (req, res, next) => {
 
 
 // 355. What are REST APIs and why do we use Them
+
+// REST Representational State Transfer - Transfer Data instead of User Interfaces so it will not render HTML pages it will render data and we leave that data to the Frontend like an mobile app or single page application or like Google API or something like that
+
+// Only the response(and the request data) changes, NOT the general server-side logic! with an API
+
+
+
+
+// 356. Accessing Data with REST APIs
+
+// We we'll transfer data in JSON format (can be easily converted to JavaScript)
+
+
+
+
+// 357. Understanding the Routing HTTP Methods
+
+// the method (GET and POST here) and the path it's an endpoint of the API
+
+// When we are working with the browser, only and not with JS in the browser, but just with forms and links the we only have GET and POST methods available, these are the two methodds the browser natively knows or the browser HTML knows.
+
+
+// Asynchronous requests JS or building mobile apps has more HTTP methods
+
+// GET - get a resource from the server
+
+// POST - post a resource to the server(create or append resource)
+
+
+// PUT - put a resourse onto the server(create or overwrite a resourse)
+
+// PATCH - update parts of an existing resource on the server
+
+// DELETE - delete a resource on the server
+
+// --OPTIONAL--   - determine whether a follow-up request is allowed(sent automatically by the browser)
+
+
+
+
+// 358. REST APIs - The Core Principles
+
+
+
+
+// 359. Creating our REST API Project Implementing the Route Setup
+
+// we install express and nodemon and body-parser
+
+
+
+
+// 360. Sending Requests Responses and Working with Postman
+
+// /controllers/feed.js
+
+exports.getPosts = (req, res, next) => {
+  res.status(200).json({
+    posts: [{ title: 'First Post', content: 'This is the first post!' }]
+  }); // this will be converted in the JSON format and send back to the client who send the request also we set the status to 200 which means that everything is OK(200 meand success or something like that)( all the time when we use APIs we need to set the status cause the client has to know which user interface to render based on our response(especially error codes are super important to pass back to the client so the client just have a look at status code and find out which interface to render))
+};
+
+exports.createPost = (req, res, next) => {
+  const title = req.body.title;
+  const content = req.body.content;
+  // Create post in db(here will be some code)
+  res.status(201).json({ // 201 status code is better to say "SUCCESS a resource was created"
+    message: 'Post created successfully!',
+    post: { id: new Date().toISOString(), title: title, content: content }
+  });
+}
+
+// For APIs we use JSON data for requests and for responses
+
+// in order to test some API (post method for example) we are using POSTMAN
+
+
+// /routes/feed.js
+
+const express = require('express');
+
+const feedController = require('../controllers/feed');
+
+const router = express.Router();
+
+// GET /feed/posts
+router.get('/posts', feedController.getPosts);
+
+// POST /feed/post
+router.post('/post', feedController.createPost);
+
+module.exports = router
+
+// app.js
+const express = require('express');
+const bodyParser = require('body-parser');
+
+const feedRoutes = require('./routes/feed');
+
+const app = express();
+
+// app.use(bodyParser.urlencoded()); // x-form-urlencoded <form>
+app.use(bodyParser.json()); // this is able to parse json data from incoming request (this is good for application/json)
+
+app.use('/feed', feedRoutes);
+
+app.listen(8080);
+
+
+
+
+// 361. REST APIs Clients CORS Errors
+
+// CORS Cors-Origin Resource Sharing
+// if we have the client and the server on the same host but on different ports, and we wanna fetch something from the server there will be a CORS ERROR (security reasons) 
+// app.js
+
+const express = require('express');
+const bodyParser = require('body-parser');
+
+const feedRoutes = require('./routes/feed');
+
+const app = express();
+
+// app.use(bodyParser.urlencoded()); // x-form-urlencoded <form>
+app.use(bodyParser.json());
+
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); // will allow request from anyone
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUTH, PATCH, DELETE'); // will allow these methods to our API
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); // and it will allow to set headers(these ones)
+  next();
+});
+
+app.use('/feed', feedRoutes);
+
+app.listen(8080);
+
+
+// https://codepen.io/peterbrw/pen/LqLvqg?editors=1010    here we are making some requests to our API
+
+
+
+
+// 362. Sending POST Requests
+
+// https://codepen.io/peterbrw/pen/LqLvqg?editors=1010
+
+const getButton = document.getElementById('get');
+const postButton = document.getElementById('post');
+
+getButton.addEventListener('click', () => {
+  fetch('http://localhost:8080/feed/posts')
+    .then(res => res.json())
+    .then(resData => console.log(resData))
+    .catch(err => console.log(err));
+});
+
+postButton.addEventListener('click', () =>{
+  fetch('http://localhost:8080/feed/post', {
+    method: 'POST',
+    body: JSON.stringify({ // here we are stringify the data we want to send
+      title: 'A Codepen Post',
+      content: 'Created via Codepen'
+    }),
+    headers: { // here we are setting the header with the content-type in order for our API to understand what we are sending 
+      'Content-Type': 'application/json'
+    }
+  })
+    .then(res => res.json())
+    .then(resData => console.log(resData))
+    .catch(err => console.log(err));
+});
+
+
+
+
+// 369. Fetching Lists of Posts
+
+// /controllers/feed.js  restjs
+
+exports.getPosts = (req, res, next) => {
+  res.status(200).json({
+    posts: [
+      {
+        _id: '1',
+        title: 'First Post', 
+        content: 'This is the first post!', 
+        imageUrl: 'images/duck.jpg',
+        creator: {
+          name: 'Maximilian'
+        },
+        createdAt: new Date() // just creating some dummy data to be fetch from the frontend react application
+      }
+    ]
+  });
+};
+
+exports.createPost = (req, res, next) => {
+  const title = req.body.title;
+  const content = req.body.content;
+  // Create post in db(here will be some code)
+  res.status(201).json({ 
+    message: 'Post created successfully!',
+    post: { id: new Date().toISOString(), title: title, content: content }
+  });
+}
+
+
+
+
+// 370. Adding a Create Post Endpoint
+
+// /controllers/feed.js  restjs
+
+exports.getPosts = (req, res, next) => {
+  res.status(200).json({
+    posts: [
+      {
+        _id: '1',
+        title: 'First Post', 
+        content: 'This is the first post!', 
+        imageUrl: 'images/duck.jpg',
+        creator: {
+          name: 'Maximilian'
+        },
+        createdAt: new Date()
+      }
+    ]
+  });
+};
+
+exports.createPost = (req, res, next) => {
+  const title = req.body.title;
+  const content = req.body.content;
+  // Create post in db(here will be some code)
+  res.status(201).json({ 
+    message: 'Post created successfully!',
+    post: {
+      _id: new Date().toISOString(), 
+      title: title, 
+      content: content, 
+      creator: { name: 'Maximilian' }, // here we are embedded some data in order for frontend to work or to simulate something
+      createdAt: new Date()
+    }
+  });
+}
+
+
+
+
+// 371. Adding Server Side Validation
+
+// npm install --save express-validator   helps us with validation
+
+// /routes/feed.js restjs
+
+const express = require('express');
+const { body } = require('express-validator/check'); // using this to validate
+
+const feedController = require('../controllers/feed');
+
+const router = express.Router();
+
+// GET /feed/posts
+router.get('/posts', feedController.getPosts);
+
+// POST /feed/post
+router.post(
+  '/post', 
+  [
+    body('title') // here we are setting the rules of validation for 'title'
+      .trim() // trimming 
+      .isLength({ min: 5 }), // minimum length
+    body('content') // here we are setting the rules of validation for 'content'
+      .trim()
+      .isLength({ min: 5 })
+  ], 
+  feedController.createPost
+);
+
+module.exports = router
+
+
+// /controllers/feed.js restjs
+
+const { validationResult } = require('express-validator/check'); // importing the validator
+
+exports.getPosts = (req, res, next) => {
+  res.status(200).json({
+    posts: [
+      {
+        _id: '1',
+        title: 'First Post', 
+        content: 'This is the first post!', 
+        imageUrl: 'images/duck.jpg',
+        creator: {
+          name: 'Maximilian'
+        },
+        createdAt: new Date()
+      }
+    ]
+  });
+};
+
+exports.createPost = (req, res, next) => {
+  const errors = validationResult(req); // using the validation result on the request will extract any errors that validation package gather
+  if(!errors.isEmpty()) { // if there are errors
+    return res 
+      .status(422)  // setting this status 
+      .json({ // returning in the json format
+        message: 'Validation failed, entered data is incorrect.', // this message
+        errors: errors.array() // and all the errors
+      });
+  }
+  const title = req.body.title;
+  const content = req.body.content;
+  // Create post in db(here will be some code)
+  res.status(201).json({ 
+    message: 'Post created successfully!',
+    post: {
+      _id: new Date().toISOString(), 
+      title: title, 
+      content: content, 
+      creator: { name: 'Maximilian' },
+      createdAt: new Date()
+    }
+  });
+}
+
+
+
+
+// 372. Setting Up a Post Model
+
+// app.js restjs
+
+mongoose.connect(
+  'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/messages?retryWrites=true' // connecting to the database 'messages'(i think it will create one for us)
+  ).then(result => {
+    app.listen(8080);
+  }).catch(err => console.log(err));
+
+
+// /models/post.js restjs
+
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const postSchema = new Schema(
+  {
+    title: {
+      type: String,
+      required: true
+    },
+    imageUrl: {
+      tye: String,
+      required: true
+    },
+    content: {
+      type: String,
+      required: true
+    },
+    creator: {
+      type: Object,
+      required: String
+    }
+  },
+  { timestamps: true } // with this mongoose will automatically add timestamps when a new version is added to the database, when a new object is added to the database, so we will get an automatically created and updated timestamp 
+);
+
+module.exports = mongoose.model('Post', postSchema);
+
+
+
+
+// 373. Storing Posts in the Database
+
+// /controllers/feed.js
+
+const { validationResult } = require('express-validator/check');
+
+const Post = require('../models/post');
+
+exports.getPosts = (req, res, next) => {
+  res.status(200).json({
+    posts: [
+      {
+        _id: '1',
+        title: 'First Post',
+        content: 'This is the first post!',
+        imageUrl: 'images/duck.jpg',
+        creator: {
+          name: 'Maximilian'
+        },
+        createdAt: new Date()
+      }
+    ]
+  });
+};
+
+exports.createPost = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({
+      message: 'Validation failed, entered data is incorrect.',
+      errors: errors.array()
+    });
+  }
+  const title = req.body.title;
+  const content = req.body.content;
+  const post = new Post({
+    title: title,
+    content: content,
+    imageUrl: 'images/duck.jpg',
+    creator: { name: 'Maximilian' }
+  });
+  post
+    .save()
+    .then(result => {
+      res.status(201).json({
+        message: 'Post created successfully!',
+        post: result // result here should be the 'created post'
+      });
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
+
+
+
+
+// 373. Static Images Error Handling
+
+// /controllers/feed.js reactjs
+
+const { validationResult } = require('express-validator/check');
+
+const Post = require('../models/post');
+
+exports.getPosts = (req, res, next) => {
+  res.status(200).json({
+    posts: [
+      {
+        _id: '1',
+        title: 'First Post',
+        content: 'This is the first post!',
+        imageUrl: 'images/duck.jpg',
+        creator: {
+          name: 'Maximilian'
+        },
+        createdAt: new Date()
+      }
+    ]
+  });
+};
+
+exports.createPost = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) { 
+    const error = new Error('Validation failed, entered data is incorrect.'); // here we are setting the error 
+    error.statusCode = 422; // our property 'statusCode' to that error
+    throw error; // and after that we are just thrwing the created error
+  }
+  const title = req.body.title;
+  const content = req.body.content;
+  const post = new Post({
+    title: title,
+    content: content,
+    imageUrl: 'images/duck.jpg',
+    creator: { name: 'Maximilian' }
+  });
+  post
+    .save()
+    .then(result => {
+      res.status(201).json({
+        message: 'Post created successfully!',
+        post: result 
+      });
+    })
+    .catch(err => {
+      if(!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err); // giving the error to the error middleware
+    });
+};
+
+
+// app.js reactjs
+
+const path = require('path');
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+
+const feedRoutes = require('./routes/feed');
+
+const app = express();
+
+// app.use(bodyParser.urlencoded()); // x-form-urlencoded <form>
+app.use(bodyParser.json());
+app.use('/images', express.static(path.join(__dirname, 'images'))); // serving images statically
+
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); 
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUTH, PATCH, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); 
+  next();
+});
+
+app.use('/feed', feedRoutes);
+
+app.use((error, req, res, next) => {
+  console.log(error);
+  const status = error.statusCode || 500; // if it's undefined it will take 500
+  const message = error.message; // this property exists by default
+  res.status(status).json({ message: message });
+});
+
+mongoose.connect(
+  'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/messages?retryWrites=true'
+  ).then(result => {
+    app.listen(8080);
+  }).catch(err => console.log(err));
+
+
+
+
+// 375. Fetching a Single Post
+
+// /controllers/feed.js restjs
+
+const { validationResult } = require('express-validator/check');
+
+const Post = require('../models/post');
+
+exports.getPosts = (req, res, next) => {
+  Post.find()
+    .then(posts => {
+      res
+        .status(200)
+        .json({ message: 'Fetched posts successfully.', posts: posts });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+exports.createPost = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed, entered data is incorrect.');
+    error.statusCode = 422;
+    throw error;
+  }
+  const title = req.body.title;
+  const content = req.body.content;
+  const post = new Post({
+    title: title,
+    content: content,
+    imageUrl: 'images/duck.jpg',
+    creator: { name: 'Maximilian' }
+  });
+  post
+    .save()
+    .then(result => {
+      res.status(201).json({
+        message: 'Post created successfully!',
+        post: result
+      });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+exports.getPost = (req, res, next) => {
+  const postId = req.params.postId;
+  Post.findById(postId)
+    .then(post => {
+      if (!post) { // this in case that post we are looking for is 'undefined'
+        const error = new Error('Could not find post.');
+        error.statusCode = 404;
+        throw error;
+      }
+      res.status(200).json({ message: 'Post fetched.', post: post }); // if we are finding the 'post' that we are looking for we are giving a response 'res' with status code 200, and the actually post: post in the json format (here the message is optional)
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+
+// /routes/feed.js reactjs
+
+const express = require('express');
+const { body } = require('express-validator/check');
+
+const feedController = require('../controllers/feed');
+
+const router = express.Router();
+
+// GET /feed/posts
+router.get('/posts', feedController.getPosts);
+
+// POST /feed/post
+router.post(
+  '/post',
+  [
+    body('title')
+      .trim()
+      .isLength({ min: 7 }),
+    body('content')
+      .trim()
+      .isLength({ min: 5 })
+  ],
+  feedController.createPost
+);
+
+router.get('/post/:postId', feedController.getPost); // route for a single post
+
+module.exports = router;
+
+
+
+
+// 377. Uploading Images
+
+// npm install --save multer
+
+// app.js reactjs
+
+const path = require('path');
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+const multer = require('multer'); // importing multer
+
+const feedRoutes = require('./routes/feed');
+
+const app = express();
+
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'images'); // define where the images will be saved
+  },
+  filename: (req, file, cb) => {
+    cb(null, new Date().toISOString() + '-' + file.originalname); // define how the images will be named
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === 'image/png' || // here we are filtering the type of the images will upload
+    file.mimetype === 'image/jpg' ||
+    file.mimetype === 'image/jpeg'
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
+
+// app.use(bodyParser.urlencoded()); // x-www-form-urlencoded <form>
+app.use(bodyParser.json()); // application/json
+app.use(
+  multer({ storage: fileStorage, fileFilter: fileFilter }).single('image')
+);
+app.use('/images', express.static(path.join(__dirname, 'images')));
+
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader(
+    'Access-Control-Allow-Methods',
+    'OPTIONS, GET, POST, PUT, PATCH, DELETE'
+  );
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
+
+app.use('/feed', feedRoutes);
+
+app.use((error, req, res, next) => {
+  console.log(error);
+  const status = error.statusCode || 500;
+  const message = error.message;
+  res.status(status).json({ message: message });
+});
+
+mongoose
+  .connect(
+    'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/messages?retryWrites=true'
+  )
+  .then(result => {
+    app.listen(8080);
+  })
+  .catch(err => console.log(err));
+
+
+// /controllers/feed.js
+
+exports.createPost = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed, entered data is incorrect.');
+    error.statusCode = 422;
+    throw error;
+  }
+  if(!req.file) {
+    const error = new Error('No image provided.');
+    error.statusCode = 422;
+    throw error;
+  }
+  const imageUrl = req.file.path;
+  const title = req.body.title;
+  const content = req.body.content;
+  const post = new Post({
+    title: title,
+    content: content,
+    imageUrl: imageUrl,
+    creator: { name: 'Maximilian' }
+  });
+  post
+    .save()
+    .then(result => {
+      res.status(201).json({
+        message: 'Post created successfully!',
+        post: result
+      });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+
+
+
+// 378. Updating Posts
+
+// /controllers/feed.js reactjs
+
+exports.updatePost = (req, res, next) => {
+  const postId = req.params.postId;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed, entered data is incorrect.');
+    error.statusCode = 422;
+    throw error;
+  }
+  const title = req.body.title;
+  const content = req.body.content;
+  let imageUrl = req.body.image;
+  if (req.file) {
+    imageUrl = req.file.path;
+  }
+  if (!imageUrl) {
+    const error = new Error('No file picked.');
+    error.statusCode = 422;
+    throw error;
+  }
+  Post.findById(postId)
+    .then(post => {
+      if (!post) {
+        const error = new Error('Could not find post.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (imageUrl !== post.imageUrl) {
+        clearImage(post.imageUrl);
+      }
+      post.title = title;
+      post.imageUrl = imageUrl;
+      post.content = content;
+      return post.save();
+    })
+    .then(result => {
+      res.status(200).json({ message: 'Post updated!', post: result });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+const clearImage = filePath => {
+  filePath = path.join(__dirname, '..', filePath);
+  fs.unlink(filePath, err => console.log(err));
+};
+
+
+
+
+// 379. Deleting Posts
+
+// /controllers/feed.js react.js
+
+exports.deletePost = (req, res, next) => {
+  const postId = req.params.postId;
+  Post.findById(postId)
+    .then(post => {
+      if (!post) {
+        const error = new Error('Could not find post.');
+        error.statusCode = 404;
+        throw error;
+      }
+      // Check logged in user
+      clearImage(post.imageUrl);
+      return Post.findByIdAndRemove(postId);
+    })
+    .then(result => {
+      console.log(result);
+      res.status(200).json({ message: 'Deleted post.' });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+
+
+
+// 380. Adding Pagination
+
+// /controllers/feed.js reactjs
+
+exports.getPosts = (req, res, next) => {
+  const currentPage = req.query.page || 1;
+  const perPage = 2;
+  let totalItems;
+  Post.find()
+    .countDocuments()
+    .then(count => {
+      totalItems = count;
+      return Post.find()
+        .skip((currentPage - 1) * perPage)
+        .limit(perPage);  
+    })
+    .then(posts => {
+      res
+        .status(200)
+        .json({
+           message: 'Fetched posts successfully.', 
+           posts: posts, 
+           totalItems: totalItems 
+        });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+
+
+
+// 381. Adding a User Model
+
+
+
+
+// 382. Adding User Signup Validation
+
+
+
+
+
+// 383. Signing Users Up
+
+// npm install --save bcryptjs // allow us to hash a password in a secure way
+
+// /controllers/auth.js reactjs
+
+const { validationResult } = require('express-validator/check');
+const bcrypt = require('bcryptjs');
+
+const User = require('../models/user');
+
+exports.signup = (req, res, next) => {
+  const errors = validationResult(req);
+  if(!errors.isEmpty()) {
+    const error = new Error('Validaion failed.');
+    error.statusCode = 422;
+    error.data = errors.array();
+    throw error;
+  }
+  const email = req.body.email;
+  const name = req.body.name;
+  const password = req.body.password;
+  bcrypt
+    .hash(password, 12)
+    .then(hassedPw => {
+      const user = new User({
+        email: email,
+        password: hassedPw,
+        name: name
+      });
+      return user.save();
+    })
+    .then(result =>{
+      res.status(201).json({ message: 'User created!', userId: result._id });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+  })
+};
+
+
+// /routes/auth.js reactjs
+
+const express = require('express');
+const { body } = require('express-validator/check');
+
+const User = require('../models/user');
+const authController = require('../controllers/auth');
+
+const router = express.Router();
+
+router.put(
+  '/signup', 
+  [
+  body('email')
+    .isEmail()
+    .withMessage('Please enter a valid email.')
+    .custom((value, { req }) => {
+      return User.findOne({email: value}).then(userDoc => {
+        if(userDoc) {
+          return Promise.reject('E-Mail address already exists!');
+        }
+      });
+    })
+    .normalizeEmail(),
+  body('password')
+    .trim()
+    .isLength({ min: 5 }),
+  body('name')
+    .trim()
+    .not()
+    .isEmpty()
+  ], 
+  authController.signup
+);
+
+module.exports = router;
+
+
+
+
+// 384. How Does Authentication Work
+
+// We don't store session on the server for an API or anything related to the client instead the server generates a token for a user and it will send it in the browser and that token it will be stored in the browser and it will be send with every request from that user
+
+// JWT - JSON Web Token (is created by server an contain JSON Data and a Signature(this signature  is created by server actually and it can be verified just by the server via a secret key))
+
+
+
+
+// 385. Starting with User Login
+
+// /controllers/auth.js reactjs
+
+exports.login = (req,res, next) => {
+  const email = req.body.email;
+  const password = req.body.password;
+  let loadedUser;
+  User.findOne({email: email})
+    .then(user => {
+      if(!user) {
+        const error = new Error('A user with this email could not be found.');
+        error.statusCode = 401;
+        throw error;
+      }
+      loadedUser = user;
+      return bcrypt.compare(password, user.password);
+    })
+    .then(isEqual => {
+      if(!isEqual){
+        const error = new Error('Wrong password');
+        error.status = 401;
+        throw error;
+      }
+      
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+
+
+
+// 386. Logging In Creating JSON Web Tokens(JWTs)
+
+// npm install --save jsonwebtoken // allow us to work with jwt tokens
+
+// /controllers/auth.js reactjs
+
+const { validationResult } = require('express-validator/check');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken'); // importin jsonwebtoken
+
+const User = require('../models/user');
+
+exports.signup = (req, res, next) => {
+  const errors = validationResult(req);
+  if(!errors.isEmpty()) {
+    const error = new Error('Validaion failed.');
+    error.statusCode = 422;
+    error.data = errors.array();
+    throw error;
+  }
+  const email = req.body.email;
+  const name = req.body.name;
+  const password = req.body.password;
+  bcrypt
+    .hash(password, 12)
+    .then(hassedPw => {
+      const user = new User({
+        email: email,
+        password: hassedPw,
+        name: name
+      });
+      return user.save();
+    })
+    .then(result =>{
+      res.status(201).json({ message: 'User created!', userId: result._id });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+  })
+};
+
+exports.login = (req,res, next) => {
+  const email = req.body.email;
+  const password = req.body.password;
+  let loadedUser;
+  User.findOne({email: email})
+    .then(user => {
+      if(!user) {
+        const error = new Error('A user with this email could not be found.');
+        error.statusCode = 401;
+        throw error;
+      }
+      loadedUser = user;
+      return bcrypt.compare(password, user.password);
+    })
+    .then(isEqual => {
+      if(!isEqual){
+        const error = new Error('Wrong password');
+        error.status = 401;
+        throw error;
+      }
+      const token = jwt.sign( // this creates a new signature, passwords are not good to be stored in the token because this will be stored in the browser
+      { 
+        email: loadedUser.email, 
+        userId: loadedUser._id.toString() 
+      }, 
+      'somesupersecretsecret', // 'somesupersecretsecret' is the private key
+      { expiresIn: '1h'} // this means that the token will expire in one hour and it's becoming invalid
+      ); 
+      res.status(200).json({ token: token, userId: loadedUser._id.toString() });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+
+
+
+// 387. Using Validating the Token
+
+// /middleware/is-auth.js
+
+const jwt = require('jsonwebtoken');
+
+module.exports = (req, res, next) => {
+  const authHeaher = req.get('Authorization');
+  if(!authHeaher) {
+    const error = new Error('Not authenticated.');
+    error.statusCode = 401;
+    throw error;
+  }
+  const token = req.get('Authorization').split(' ')[1];
+  let decodedToken;
+  try {
+    decodedToken = jwt.verify(token, 'somesupersecretsecret');
+  } catch(err) {
+    err.statusCode = 500;
+    throw err;
+  }
+  if(!decodedToken) {
+    const error = new Error('Not Authenticated.');
+    error.statusCode = 401;
+    throw error;
+  }
+  req.userId = decodedToken.userId;
+  next();
+};
+
+
+
+
+// 388. Adding Auth Middleware to All Routes
+
+
+
+
+// 389. Connecting Posts Users
+
+
+
+
+// 390. Adding Authorization Checks
+
+
+
+
+// 391. Clearing Post-User Relations
+
+// /controllers/feed.js react.js
+
+const fs = require('fs');
+const path = require('path');
+
+const { validationResult } = require('express-validator/check');
+
+const Post = require('../models/post');
+const User = require('../models/user');
+
+exports.getPosts = (req, res, next) => {
+  const currentPage = req.query.page || 1;
+  const perPage = 2;
+  let totalItems;
+  Post.find()
+    .countDocuments()
+    .then(count => {
+      totalItems = count;
+      return Post.find()
+        .skip((currentPage - 1) * perPage)
+        .limit(perPage);
+    })
+    .then(posts => {
+      res.status(200).json({
+        message: 'Fetched posts successfully.',
+        posts: posts,
+        totalItems: totalItems
+      });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+exports.createPost = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed, entered data is incorrect.');
+    error.statusCode = 422;
+    throw error;
+  }
+  if (!req.file) {
+    const error = new Error('No image provided.');
+    error.statusCode = 422;
+    throw error;
+  }
+  const imageUrl = req.file.path;
+  const title = req.body.title;
+  const content = req.body.content;
+  let creator;
+  const post = new Post({
+    title: title,
+    content: content,
+    imageUrl: imageUrl,
+    creator: req.userId
+  });
+  post
+    .save()
+    .then(result => {
+      return User.findById(req.userId);
+    })
+    .then(user => {
+      creator = user;
+      user.posts.push(post);
+      return user.save();
+    })
+    .then(result => {
+      res.status(201).json({
+        message: 'Post created successfully!',
+        post: post,
+        creator: { _id: creator._id, name: creator.name }
+      });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+exports.getPost = (req, res, next) => {
+  const postId = req.params.postId;
+  Post.findById(postId)
+    .then(post => {
+      if (!post) {
+        const error = new Error('Could not find post.');
+        error.statusCode = 404;
+        throw error;
+      }
+      res.status(200).json({ message: 'Post fetched.', post: post });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+exports.updatePost = (req, res, next) => {
+  const postId = req.params.postId;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed, entered data is incorrect.');
+    error.statusCode = 422;
+    throw error;
+  }
+  const title = req.body.title;
+  const content = req.body.content;
+  let imageUrl = req.body.image;
+  if (req.file) {
+    imageUrl = req.file.path;
+  }
+  if (!imageUrl) {
+    const error = new Error('No file picked.');
+    error.statusCode = 422;
+    throw error;
+  }
+  Post.findById(postId)
+    .then(post => {
+      if (!post) {
+        const error = new Error('Could not find post.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (post.creator.toString() !== req.userId) {
+        const error = new Error('Not authorized!');
+        error.statusCode = 403;
+        throw error;
+      }
+      if (imageUrl !== post.imageUrl) {
+        clearImage(post.imageUrl);
+      }
+      post.title = title;
+      post.imageUrl = imageUrl;
+      post.content = content;
+      return post.save();
+    })
+    .then(result => {
+      res.status(200).json({ message: 'Post updated!', post: result });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+exports.deletePost = (req, res, next) => {
+  const postId = req.params.postId;
+  Post.findById(postId)
+    .then(post => {
+      if (!post) {
+        const error = new Error('Could not find post.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (post.creator.toString() !== req.userId) {
+        const error = new Error('Not authorized!');
+        error.statusCode = 403;
+        throw error;
+      }
+      // Check logged in user
+      clearImage(post.imageUrl);
+      return Post.findByIdAndRemove(postId);
+    })
+    .then(result => {
+      return User.findById(req.userId);
+    })
+    .then(user => {
+      user.posts.pull(postId);
+      return user.save();
+    })
+    .then(result => {
+      res.status(200).json({ message: 'Deleted post.' });
+    })
+    .catch(err => {
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+const clearImage = filePath => {
+  filePath = path.join(__dirname, '..', filePath);
+  fs.unlink(filePath, err => console.log(err));
+};
+
+
+
+
+// 395 What is Async Await All About
+
+
+
+
+// 396. Transforming Then Cath to Async Await
+
+// /controllers/feed.js reactjs
+
+exports.getPosts = async (req, res, next) => {
+  const currentPage = req.query.page || 1;
+  const perPage = 2;
+  let totalItems;
+  try {
+    const totalItems = await Post.find().countDocuments()
+    const posts = await Post.find()
+      .skip((currentPage - 1) * perPage)
+      .limit(perPage);
+
+    res.status(200).json({
+      message: 'Fetched posts successfully.',
+      posts: posts,
+      totalItems: totalItems
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+     next(err);
+  }
+
+
+
+
+// 402. Websocket Solutions - An Overview
+
+
+
+
+// 403. Setting Up Socket.io on the Server
+
+// npm install --save socket.io  // installing socket.io
+
+// websocket are like http protocols but different channels, and http requests(which are set by default by the browser) are not interfering with these websocket requests or inverse
+
+// app.js reactjs
+
+mongoose
+  .connect(
+    'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/messages?retryWrites=true'
+  )
+  .then(result => {
+    const server = app.listen(8080); // this is now the server and the port on which is listening for requests 
+    const io = require('socket.io')(server); // here we are building up the websockets of 'socket.io' on the http protocols of the server
+    io.on('connection', socket => { // this is an event listener to wait for new connections , socket it's a function where we get the client (socket it's actually the client ) and this is the connection from the server to the client, and this function will be executed for every new client that connects, not only one time but as many time it's required, as many clients are connecting
+      console.log('Client connected');
+    });
+  })
+  .catch(err => console.log(err));
+
+
+
+
+// 404. Establishing a Connection From the Client
+
+// npm install --save socket.io-client // help us to connect to through websocket to the server 
+
+// /Feed/Feed.js  front api
+
+import React, { Component, Fragment } from 'react';
+import openSocket from 'socket.io-client' // importing 'socket.io-client'
+
+import Post from '../../components/Feed/Post/Post';
+import Button from '../../components/Button/Button';
+import FeedEdit from '../../components/Feed/FeedEdit/FeedEdit';
+import Input from '../../components/Form/Input/Input';
+import Paginator from '../../components/Paginator/Paginator';
+import Loader from '../../components/Loader/Loader';
+import ErrorHandler from '../../components/ErrorHandler/ErrorHandler';
+import './Feed.css';
+
+class Feed extends Component {
+  state = {
+    isEditing: false,
+    posts: [],
+    totalPosts: 0,
+    editPost: null,
+    status: '',
+    postPage: 1,
+    postsLoading: true,
+    editLoading: false
+  };
+
+  componentDidMount() {
+    fetch('http://localhost:8080/auth/status', {
+      headers: {
+        Authorization: 'Bearer ' + this.props.token
+      }
+    })
+      .then(res => {
+        if (res.status !== 200) {
+          throw new Error('Failed to fetch user status.');
+        }
+        return res.json();
+      })
+      .then(resData => {
+        this.setState({ status: resData.status });
+      })
+      .catch(this.catchError);
+
+    this.loadPosts();
+    openSocket('http://localhost:8080'); // now connectiong to the server on which we start the connection and this function will do all the heavy lifting behind the scenes and when we will connecting we will see in the client console 'Client connected' because we console log that
+  }
+
+
+
+
+// 405. Identifying Realtime Potential
+
+
+
+
+// 406. Sharing IO Instance Across Files
+
+// socket.js reactjs
+
+let io;
+
+module.exports = {
+  init: httpServer => { // httpServer is the argument of the init function
+    io = require('socket.io')(httpServer); // this establish a connection on websockets with the argument function(httpServer)
+    return io;
+  },
+  getIO: () => {
+    if(!io) { // if the isn't o socket 'io' throw the error
+      throw new Error('Socket.io not initialized!');
+    }
+    return io; // if there's a socket return it
+  }
+};
+
+
+// app.js reactjs
+
+
+mongoose
+  .connect(
+    'mongodb+srv://maximilian:maximilian@cluster0-5pzzp.mongodb.net/messages?retryWrites=true'
+  )
+  .then(result => {
+    const server = app.listen(8080); 
+    const io = require('./socket').init(server);  // here we are using the 'socket' from './socket.js' and the property(method) init, which will initialize the 'socket'
+    io.on('connection', socket => { 
+      console.log('Client connected');
+    });
+  })
+  .catch(err => console.log(err));
+
+
+
+
+// 407. Synchronizing POST Additions
+
+// /controllers/feed.js reactjs
+
+const io = require('../socket');
+
+//.............................
+
+exports.createPost = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed, entered data is incorrect.');
+    error.statusCode = 422;
+    throw error;
+  }
+  if (!req.file) {
+    const error = new Error('No image provided.');
+    error.statusCode = 422;
+    throw error;
+  }
+  const imageUrl = req.file.path;
+  const title = req.body.title;
+  const content = req.body.content;
+  const post = new Post({
+    title: title,
+    content: content,
+    imageUrl: imageUrl,
+    creator: req.userId
+  });
+  try {
+    await post.save();
+    const user = await User.findById(req.userId);
+    user.posts.push(post);
+    await user.save();
+    io.getIO().emit('posts', { action: 'create', post: post }); // we are getting thee 'socket' connection and after we create a post we 'emit' to all existng users through 'post' channel,  on  "action: 'create", the 'post' which was created
+    res.status(201).json({
+      message: 'Post created successfully!',
+      post: post,
+      creator: { _id: user._id, name: user.name }
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+
+// Feed.js front api
+
+componentDidMount() {
+  fetch('http://localhost:8080/auth/status', {
+    headers: {
+      Authorization: 'Bearer ' + this.props.token
+    }
+  })
+    .then(res => {
+      if (res.status !== 200) {
+        throw new Error('Failed to fetch user status.');
+      }
+      return res.json();
+    })
+    .then(resData => {
+      this.setState({ status: resData.status });
+    })
+    .catch(this.catchError);
+
+  this.loadPosts();
+  const socket = openSocket('http://localhost:8080'); 
+  socket.on('posts', data => { // here we are listening on channel 'posts' for events
+    if (data.action === 'create') { // if the data.action is correct
+      this.addPost(data.post); // we are doing this with the post which was created
+    }
+  });
+}
+
+
+
+
+// 408. Fixing a Bug - The Missing Username
+
+// /controllers/feed.js reactjs
+
+io.getIO().emit('posts', {
+  action: 'create',
+  post: { ...post._doc, creator: { _id: req.userId, name: user.name } }
+});
+
+
+
+
+// 409. Updating Posts On All Connected Clients
+
+// /controllers/feed.js reactjs
+
+exports.updatePost = async (req, res, next) => {
+  const postId = req.params.postId;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed, entered data is incorrect.');
+    error.statusCode = 422;
+    throw error;
+  }
+  const title = req.body.title;
+  const content = req.body.content;
+  let imageUrl = req.body.image;
+  if (req.file) {
+    imageUrl = req.file.path;
+  }
+  if (!imageUrl) {
+    const error = new Error('No file picked.');
+    error.statusCode = 422;
+    throw error;
+  }
+  try {
+    const post = await Post.findById(postId).populate('creator'); // populate with the creator 
+    if (!post) {
+      const error = new Error('Could not find post.');
+      error.statusCode = 404;
+      throw error;
+    }
+    if (post.creator._id.toString() !== req.userId) {
+      const error = new Error('Not authorized!');
+      error.statusCode = 403;
+      throw error;
+    }
+    if (imageUrl !== post.imageUrl) {
+      clearImage(post.imageUrl);
+    }
+    post.title = title;
+    post.imageUrl = imageUrl;
+    post.content = content;
+    const result = await post.save();
+    io.getIO().emit('posts', { action: 'update', post: result }) // emit to all users on the channel 'post' with the 'action: update'(which we created cause want, it's not provided by socket.io) that we update a post
+    res.status(200).json({ message: 'Post updated!', post: result });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+
+// Feed.js front api
+
+componentDidMount() {
+  fetch('http://localhost:8080/auth/status', {
+    headers: {
+      Authorization: 'Bearer ' + this.props.token
+    }
+  })
+    .then(res => {
+      if (res.status !== 200) {
+        throw new Error('Failed to fetch user status.');
+      }
+      return res.json();
+    })
+    .then(resData => {
+      this.setState({ status: resData.status });
+    })
+    .catch(this.catchError);
+
+  this.loadPosts();
+  const socket = openSocket('http://localhost:8080'); 
+  socket.on('posts', data => {
+    if (data.action === 'create') {
+      this.addPost(data.post);
+    } else if(data.action === 'update') { // on the channel 'post' we are listening to the event to see if the data.action is 'update' and if it is we are doing what is below
+      this.updatedPosts(data.post);
+    }
+  })
+
+
+
+
+// 410. Sorting Correctly
+
+// /controllers/feed.js reactjs
+
+const posts = await Post.find()
+      .populate('creator')
+      .sort({createdAt: -1}) // sorting in an descending way
+      .skip((currentPage - 1) * perPage)
+      .limit(perPage);
+
+
+
+
+// 411. Deleting Posts Across Clients
+
+// /controllers/feed.js reactjs
+
+exports.deletePost = async (req, res, next) => {
+  const postId = req.params.postId;
+  try {
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      const error = new Error('Could not find post.');
+      error.statusCode = 404;
+      throw error;
+    }
+    if (post.creator.toString() !== req.userId) {
+      const error = new Error('Not authorized!');
+      error.statusCode = 403;
+      throw error;
+    }
+    // Check logged in user
+    clearImage(post.imageUrl);
+    await Post.findByIdAndRemove(postId);
+
+    const user = await User.findById(req.userId);
+    user.posts.pull(postId);
+    await user.save();
+    io.getIO().emit('posts', { action: 'delete', post: postId }); ////
+    res.status(200).json({ message: 'Deleted post.' });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+
+// Feed.js front api
+
+const socket = openSocket('http://localhost:8080');
+    socket.on('posts', data => {
+      if (data.action === 'create') {
+        this.addPost(data.post);
+      } else if (data.action === 'update') {
+        this.updatePost(data.post);
+      } else if (data.action === 'delete') {
+        this.loadPosts();
+      }
+    });
