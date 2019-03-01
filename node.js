@@ -14581,7 +14581,7 @@ exports.postEditProduct = (req, res, next) => {
 };
 
 exports.getProducts = (req, res, next) => {
-  Product.find({userId: req.user._id}) // here in the admin Products we get just the product which were created by that user, products with his id
+  Product.find({userId: req.user._id}) // here in the admin Products we get just the product which were created by that user, products with his id (good mark, second round***=)))
     // .select('title price -_id')
     // .populate('userId', 'name')
     .then(products => {
@@ -14676,7 +14676,7 @@ exports.postEditProduct = (req, res, next) => {
 
   Product.findById(prodId)
     .then(product => {
-      if(product.userId !== req.user._id) { // if the product id isn't the same with of id of the user which is currently log in or admin, than it will not be able to edit that product
+      if(product.userId.toString() !== req.user._id.toString()) { // if the product id isn't the same with of id of the user which is currently log in or admin, than it will not be able to edit that product(we are converting them to string in order to work, cause product.userId is a mongo object Id)
         return res.redirect('/');
       }
       product.title = updatedTitle;
@@ -14708,7 +14708,7 @@ exports.getProducts = (req, res, next) => {
 
 exports.postDeleteProduct = (req, res, next) => {
   const prodId = req.body.productId;
-  Product.deleteOne({ _id: prodId, userId: req.user._id }) // and here we are deleting one product which has the same id with the prodID and the user which is currently log in is the user which create that product
+  Product.deleteOne({ _id: prodId, userId: req.user._id }) // and here we are deleting one product which has the same id (userid)with the prodID(userId) and the user which is currently log in is the user which create that product
     .then(() => {
       console.log('DESTROYED PRODUCT');
       res.redirect('/admin/products');
@@ -14733,13 +14733,13 @@ exports.postDeleteProduct = (req, res, next) => {
 
 // npm install --save express-validator  -  express-validator is a set of express.js middlewares that wraps validator.js validator and sanitizer functions
 
-// You want to validate on the post routes, when a user sends data
+// You want to validate on the post routes, when a user sends data cause if you don't do any validation on the server side, even if you have "frontend validation", the user can disable that and can save data that you don't want in your database
 
 
 // /routes/auth.js
 
 const express = require('express');
-const { check } = require('express-validator/check'); // importing the express-validator/check which is a subpackega, but we need this subpackage for our validation, which will give us an object
+const { check } = require('express-validator/check'); // importing the express-validator/check which is a subpackega, but we need this subpackage for our validation, which will give us an object, 'check' from this package is looking for everything in the request (like params, query params, forms inputs, cookie(i think) and so on)
 
 const authController = require('../controllers/auth');
 
@@ -14751,7 +14751,7 @@ router.get('/signup', authController.getSignup);
 
 router.post('/login', authController.postLogin);
 
-router.post('/signup', check('email').isEmail(), authController.postSignup); // this 'check' function is looking for an input field named 'email' to see if we entered a valid mail
+router.post('/signup', check('email').isEmail(), authController.postSignup); // this 'check' function is looking for an input field named 'email' to see if we entered a valid mail(field name is the same as the name from the input form name)
 
 router.post('/logout', authController.postLogout);
 
@@ -14773,7 +14773,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const sendgridTransport = require('nodemailer-sendgrid-transport');
-const { validationResult } = require('express-validator/check'); // here we are importing from 'express-validator/check' the 'validationResult'
+const { validationResult } = require('express-validator/check'); // here we are importing from 'express-validator/check' the 'validationResult' which will validate our inputs which we set it on routes
  
 const User = require('../models/user');
 
@@ -14851,11 +14851,11 @@ exports.postSignup = (req, res, next) => {
   const confirmPassword = req.body.confirmPassword;
   const errors = validationResult(req); // here we are extracting the 'errors' from validationResult of the request
   if(!errors.isEmpty()) { // if the errors aren't empty we are doint next
-    console.log(errors.array());
+    console.log(errors.array()); // if we have any errors we will render the same page
     return res.status(422).render('auth/signup', { // 422 UNPROCESSABLE ENTITY
       path: '/signup',
       pageTitle: 'Signup',
-      errorMessage: errors.array() // giving the errors.array() to errorMessage
+      errorMessage: errors.array() // giving the errors.array() to errorMessage(the array of objects with errors)
     });
   }
   User.findOne({ email: email })
@@ -15097,7 +15097,7 @@ exports.postSignup = (req, res, next) => {
     return res.status(422).render('auth/signup', { 
       path: '/signup',
       pageTitle: 'Signup',
-      errorMessage: errors.array()[0].msg // this is an array with errors(which is an object)
+      errorMessage: errors.array()[0].msg // we are displaying the first element of the errors array, cause there we are finding our error, and .msg indicates exactly which was our error, we can customize this message in order of the error we are making(we are customize this in the routes)
     });
   }
   User.findOne({ email: email })
@@ -15264,7 +15264,7 @@ router.post('/login', authController.postLogin);
 router.post(
   '/signup',
   check('email')
-    .isEmail()
+    .isEmail() // isEmail() it's a built-in validator which will validate our mail in the form
     .withMessage('Please enter a valid email.'), // this will customize the message of the error for mail in this case    
   authController.postSignup
 );
@@ -15307,11 +15307,11 @@ router.post(
   check('email')
     .isEmail()
     .withMessage('Please enter a valid email.')
-    .custom((value, { req }) => { // value is which value the user enter, // extracting the request
+    .custom((value, { req }) => { // value is which value the user enter, // extracting the request(or from request)
       if (value === 'test@test.com') { // in this way we can create or own validators
-        throw new Error('This email address if forbidden.');
+        throw new Error('This email address if forbidden.');  // if the user enter the value which we don't want we will throw an error
       }
-      return true;
+      return true; // if not we will return just true
     }),
   authController.postSignup
 );
@@ -15336,7 +15336,7 @@ module.exports = router;
 // /routes/auth.js
 
 const express = require('express');
-const { check, body } = require('express-validator/check');
+const { check, body } = require('express-validator/check'); // here with 'body' 'express-validator' is checking for errors just in the 'request body'
 
 const authController = require('../controllers/auth');
 
@@ -15362,10 +15362,10 @@ router.post(
       }), 
     body(
       'password', // look for the 'password' in the body of the request
-       'Please enter a password with only numbers and text and at least 5 characters.' // default error message for this (password validator)
+       'Please enter a password with only numbers and text and at least 5 characters.' // default error message for this (password validator), easier than '.withMessage()' to custom or error message
       ) 
       .isLength({ min: 5 }) // minim length of the 'password' to be 5 characters
-      .isAlphanumeric()   // in production we should use something more complex than this
+      .isAlphanumeric()   // in production we should use something more complex than this(this is just for sake of example)
   ],
   authController.postSignup
 );
@@ -15421,10 +15421,10 @@ router.post(
       .isLength({ min: 5 }) 
       .isAlphanumeric(),
     body('confirmPassword').custom((value, { req }) => {
-      if(value !== req.body.password) {
+      if(value !== req.body.password) { // here we are checking to see if the 'confirmPassword isn't the save with the password, and if isn't we are throwing an error
         throw new Error('Passwords have to match!');
-      }
-      return true;
+      } 
+      return true; // if the password are equal we are returning true
     })      
   ],
   authController.postSignup
@@ -15474,9 +15474,9 @@ router.post(
         //   throw new Error('This email address if forbidden.');
         // }
         // return true;
-        return User.findOne({ email: value }).then(userDoc => { // looking in the database for the email that the 'user' enter
+        return User.findOne({ email: value }).then(userDoc => { // looking in the database for the email that the 'user' enter here is 'value' of the email form input
           if (userDoc) { // if that email exists
-            return Promise.reject( // we are 'reject' ing with with Promise.reject()
+            return Promise.reject( // we are 'reject' ing with with Promise.reject() and this we be add to error array
               'E-Mail exists already, please pick a different one.'
             );
           }
@@ -15512,6 +15512,119 @@ module.exports = router;
 
 // and we restructed the code from /controllers/auth.js
 
+exports.postSignup = (req, res, next) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  const errors = validationResult(req);
+  if(!errors.isEmpty()) {
+    console.log(errors.array());
+    return res.status(422).render('auth/signup', {
+      path: '/signup',
+      pageTitle: 'Signup',
+      errorMessage: errors.array()[0].msg
+    });
+  }
+   // here we are not looking to see if the email the user enter is already in the database, because we already did it in the 'routes/auth.js'
+  bcrypt
+    .hash(password, 12)
+    .then(hashedPassword => {
+      const user = new User({
+        email: email,
+        password: hashedPassword,
+        cart: { items: [] }
+      });
+      return user.save();
+    })
+    .then(result => {
+      res.redirect('/login');
+      return transporter.sendMail({
+        to: email,
+        from: 'shop@node-complete.com',
+        subject: 'Signup succeeded!',
+        html: '<h1>You successfully signed up!</h1>'
+      });
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
+
+// Assignment Understanding Validaion
+
+// /routes/auth.js
+
+const express = require('express');
+const { check, body } = require('express-validator/check');
+
+const authController = require('../controllers/auth');
+const User = require('../models/user');
+
+const router = express.Router();
+
+router.get('/login', authController.getLogin);
+
+router.get('/signup', authController.getSignup);
+
+router.post(
+  '/login',
+  [
+    body('email')
+      .isEmail()
+      .withMessage('Please enter a valid email address.'),
+    body('password', 'Password has to be valid.')
+      .isLength({ min: 5 }) // we have to be carefull cause if in the signup the limit is higher, the user which signup will never login
+      .isAlphanumeric()
+  ],
+  authController.postLogin
+);
+
+router.post(
+  '/signup',
+  [
+    check('email')
+      .isEmail()
+      .withMessage('Please enter a valid email.')
+      .custom((value, { req }) => {
+        // if (value === 'test@test.com') {
+        //   throw new Error('This email address if forbidden.');
+        // }
+        // return true;
+        return User.findOne({ email: value }).then(userDoc => {
+          if (userDoc) {
+            return Promise.reject(
+              'E-Mail exists already, please pick a different one.'
+            );
+          }
+        });
+      }),
+    body(
+      'password',
+      'Please enter a password with only numbers and text and at least 5 characters.'
+    )
+      .isLength({ min: 5 })
+      .isAlphanumeric(),
+    body('confirmPassword').custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords have to match!');
+      }
+      return true;
+    })
+  ],
+  authController.postSignup
+);
+
+router.post('/logout', authController.postLogout);
+
+router.get('/reset', authController.getReset);
+
+router.post('/reset', authController.postReset);
+
+router.get('/reset/:token', authController.getNewPassword);
+
+router.post('/new-password', authController.postNewPassword);
+
+module.exports = router;
 
 
 
@@ -15817,7 +15930,7 @@ exports.getSignup = (req, res, next) => {
       password: '',
       confirmPassword: ''
     },
-    validationErrors: [] // no errors at the beggining
+    validationErrors: [] // we are assign this property empty cause there is no errors at the beggining
   });
 };
 
@@ -16014,6 +16127,54 @@ exports.postNewPassword = (req, res, next) => {
     });
 };
 
+// signup page html
+
+<%- include('../includes/head.ejs') %>
+    <link rel="stylesheet" href="/css/forms.css">
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+
+{/* <body>
+   <%- include('../includes/navigation.ejs') %>
+
+    <main>
+        <% if (errorMessage) { %>
+            <div class="user-message user-message--error"><%= errorMessage %></div>
+        <% } %>
+        <form class="login-form" action="/signup" method="POST" novalidate>
+            <div class="form-control">
+                <label for="email">E-Mail</label>
+                <input 
+                    class="<%= validationErrors.find(e => e.param === 'email') ? 'invalid' : '' %>" // here we checking to see if there are any errors, and if there are we will add the invalid class, which will make the input border red
+                    type="email" 
+                    name="email" 
+                    id="email" 
+                    value="<%= oldInput.email %>">
+            </div>
+            <div class="form-control">
+                <label for="password">Password</label>
+                <input 
+                    class="<%= validationErrors.find(e => e.param === 'password') ? 'invalid' : '' %>"
+                    type="password" 
+                    name="password" 
+                    id="password" 
+                    value="<%= oldInput.password %>">
+            </div>
+            <div class="form-control">
+                <label for="confirmPassword">Confirm Password</label>
+                <input 
+                    class="<%= validationErrors.find(e => e.param === 'confirmPassword') ? 'invalid' : '' %>"
+                    type="password" 
+                    name="confirmPassword" 
+                    id="confirmPassword" 
+                    value="<%= oldInput.confirmPassword %>">
+            </div>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button class="btn" type="submit">Signup</button>
+        </form>
+    </main>
+<%- include('../includes/end.ejs') %>< */}
+
 
 
 
@@ -16082,30 +16243,30 @@ exports.postLogin = (req, res, next) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(422).render('auth/login', {
+    return res.status(422).render('auth/login', { 
       path: '/login',
       pageTitle: 'Login',
       errorMessage: errors.array()[0].msg,
       oldInput: {
-        email: email,
+        email: email, // here we are sending the inputs in order to repopulate the inputs
         password: password
       },
-      validationErrors: errors.array()
+      validationErrors: errors.array() // here we are sending the errors array
     });
   }
 
   User.findOne({ email: email })
     .then(user => {
       if (!user) {
-        return res.status(422).render('auth/login', {
+        return res.status(422).render('auth/login', { // here we are not using 'flash errors' inseated we are using validation as we did to signup page a lecture before
           path: '/login',
           pageTitle: 'Login',
-          errorMessage: 'Invalid email or password.',
-          oldInput: {
+          errorMessage: 'Invalid email or password.', // here we are setting the message we want to display
+          oldInput: { // here we are givin the old values of input in order to 'repopulate the inputs
             email: email,
             password: password
           },
-          validationErrors: []
+          validationErrors: [] // here the validation errors is empty cause we already set the message
         });
       }
       bcrypt
@@ -16290,8 +16451,85 @@ exports.postNewPassword = (req, res, next) => {
     });
 };
 
+// /routes/auth.js
 
-// Can't watch the last 2 videos if you want
+const express = require('express');
+const { check, body } = require('express-validator/check');
+
+const authController = require('../controllers/auth');
+const User = require('../models/user');
+
+const router = express.Router();
+
+router.get('/login', authController.getLogin);
+
+router.get('/signup', authController.getSignup);
+
+router.post(
+  '/login',
+  [
+    body('email')
+      .isEmail()
+      .withMessage('Please enter a valid email address.')
+      .normalizeEmail(), // this will normalize the mail, it will tranform all the characters to lowercase
+    body('password', 'Password has to be valid.')
+      .isLength({ min: 5 })
+      .isAlphanumeric()
+      .trim()
+  ],
+  authController.postLogin
+);
+
+router.post(
+  '/signup',
+  [
+    check('email')
+      .isEmail()
+      .withMessage('Please enter a valid email.')
+      .custom((value, { req }) => {
+        // if (value === 'test@test.com') {
+        //   throw new Error('This email address if forbidden.');
+        // }
+        // return true;
+        return User.findOne({ email: value }).then(userDoc => {
+          if (userDoc) {
+            return Promise.reject(
+              'E-Mail exists already, please pick a different one.'
+            );
+          }
+        });
+      })
+      .normalizeEmail(),
+    body(
+      'password',
+      'Please enter a password with only numbers and text and at least 5 characters.'
+    )
+      .isLength({ min: 5 })
+      .isAlphanumeric()
+      .trim(),
+    body('confirmPassword')
+      .trim()
+      .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords have to match!');
+      }
+      return true;
+    })
+  ],
+  authController.postSignup
+);
+
+router.post('/logout', authController.postLogout);
+
+router.get('/reset', authController.getReset);
+
+router.post('/reset', authController.postReset);
+
+router.get('/reset/:token', authController.getNewPassword);
+
+router.post('/new-password', authController.postNewPassword);
+
+module.exports = router;
 
 
 
