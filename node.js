@@ -16855,7 +16855,7 @@ exports.postDeleteProduct = (req, res, next) => {
 
 // 304. Errors - Some Theory
 
-// If we don't handle our errors from the application, the application will just crash  
+// If we don't handle our errors from the application(with try and catch), the application will just crash  
 
 // error-playground.js
 
@@ -16938,7 +16938,7 @@ app.use((req, res, next) => {
       next();
     })
     .catch(err => {
-      throw new Error(err); // if we have some tehnical issue(connecting to our database in this case) we are throwing an error, express give us a way to handle this errors, that's why we are doing it like this
+      throw new Error(err); // if we have some tehnical issue(non existing user there) we are throwing an error, express give us a way to handle this errors, that's why we are doing it like this
     });
 });
 
@@ -17266,9 +17266,9 @@ exports.getEditProduct = (req, res, next) => {
       });
     })
     .catch(err => {
-      const error = new Error(err);
-      error.httpStatusCode = 500;
-      return next(error);
+      const error = new Error(err); // here as well if the 'catch' block, catch any error, we will create an 'error' with the 'catch block' error message
+      error.httpStatusCode = 500; // set httpStatusCode to 500
+      return next(error); // and handle that error to the error's middleware
     });
 };
 
@@ -17418,7 +17418,7 @@ app.get('/500', errorController.get500);
 
 app.use(errorController.get404);
 
-app.use((error, req, res, next) => { // this an error middleware which will handle errors, in case that there are some errors, express will skip all the other middlewares in between and it will reach this 'error' middleware
+app.use((error, req, res, next) => { // this an error middleware which will handle errors, in case that there are some errors, express will skip all the other middlewares in between and it will reach this 'error' middleware(if we got more than one error-handling middleware, they'll execute from top to bottom. Just like the "normal" middleware)
   res.redirect('/500');
 });
 
@@ -17567,7 +17567,7 @@ mongoose
 //         <% if (errorMessage) { %>
 //             <div class="user-message user-message--error"><%= errorMessage %></div>
 //         <% } %>
-//         <form class="product-form" action="/admin/<% if (editing) { %>edit-product<% } else { %>add-product<% } %>" method="POST" enctype="multipart/form-data"> // this means that we will have file to upload or somethng like that
+//         <form class="product-form" action="/admin/<% if (editing) { %>edit-product<% } else { %>add-product<% } %>" method="POST" enctype="multipart/form-data"> // this means that we will have file to upload (binary content, not just text)
 //             <div class="form-control">
 //                 <label for="title">Title</label>
 //                 <input 
