@@ -18211,7 +18211,7 @@ exports.postAddProduct = (req, res, next) => {
     });
   }
 
-  const imageUrl = image.path; // this is the path to the image in the file system
+  const imageUrl = image.path; // this is the path to the image in the file system('image' is the file object we get from multer )
 
   const product = new Product({
     // _id: new mongoose.Types.ObjectId('5c4ad9963b8f0c27b867d18f'),
@@ -18424,7 +18424,7 @@ app.use(
   multer({ storage: fileStorage, fileFilter: fileFilter }).single('image')
 );
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/images', express.static(path.join(__dirname, 'images'))); // here we are serving the images staticlly, so if someone want to access '/images' we will serve 'images' folder (in our case the products for images will access this folder)
+app.use('/images', express.static(path.join(__dirname, 'images'))); // here we are serving the images staticlly, so if someone want to access '/images'(path on the server) we will serve 'images' folder (in our case the 'products for images' will access this folder) (express will serve this images folder as they are part of the 'root' for example wi 'http://localhost:3000/images/2019-03-04T08:23:46.963Z-photo-1551527182-bf506e7484b0.jpeg' we will see one picture that we saved in our file system cause we served the folder 'images' staticly"
 app.use(
   session({
     secret: 'my secret',
@@ -18488,6 +18488,26 @@ mongoose
   });
 
 
+// /views/shop/product-detail.ejs
+
+<%- include('../includes/head.ejs') %>
+    </head>
+
+    <body>
+        <%- include('../includes/navigation.ejs') %>
+        <main class="centered">
+            <h1><%= product.title %></h1>
+            <hr>
+            <div class="image">
+                <img src="/<%= product.imageUrl %>" alt="<%= product.title %>"> // here we are putting a '/'before our imageUrl to let the browser pick that image from the right path
+            </div>
+            <h2><%= product.price %></h2>
+            <p><%= product.description %></p>
+            <% if (isAuthenticated) { %>
+                <%- include('../includes/add-to-cart.ejs', {product: product}) %>
+            <% } %>
+        </main>
+        <%- include('../includes/end.ejs') %>
 
 
 // 323. Downloading Files with Authentication
@@ -18498,11 +18518,11 @@ exports.getInvoice = (req, res, next) => {
   const orderId = req.params.orderId;
   const invoiceName = 'invoice-' + orderId + '.pdf';
   const invoicePath = path.join('data', 'invoices', invoiceName);
-  fs.readFile(invoicePath, (err, data) => { // with this we are able to download the incoive
+  fs.readFile(invoicePath, (err, data) => { // with this we are able to download the invoice(there is a dummy invoice in /data/invoices/....pdf)  here we are reading from that file, and after we are reading it
     if(err) {
      return next(err);
     }
-    res.send(data);
+    res.send(data); // we are 'send'-ing it to the user
   });
 };
 
@@ -18510,6 +18530,33 @@ exports.getInvoice = (req, res, next) => {
 
 router.get('/orders/:orderId', isAuth, shopController.getInvoice);
 
+// /views/shop/orders.ejs
+
+<%- include('../includes/head.ejs') %>
+    <link rel="stylesheet" href="/css/orders.css">
+    </head>
+
+    <body>
+        <%- include('../includes/navigation.ejs') %>
+        <main>
+            <% if (orders.length <= 0) { %>
+                <h1>Nothing there!</h1>
+            <% } else { %>
+                <ul class="orders">
+                    <% orders.forEach(order => { %>
+                        <li class="orders__item">
+                            <h1>Order - # <%= order._id %></h1>
+                            <ul class="orders__products">
+                                <% order.products.forEach(p => { %>
+                                    <li class="orders__products-item"><%= p.product.title %> (<%= p.quantity %>) - <a href="/orders/<%= order._id %>">Invoice</a></li> // we make this like to be downloadeble for user to download their invoice
+                                <% }); %>
+                            </ul>
+                        </li>
+                    <% }); %>
+                </ul>
+            <% } %>
+        </main>
+        <%- include('../includes/end.ejs') %>
 
 
 
@@ -19040,7 +19087,7 @@ exports.getInvoice = (req, res, next) => {
     //     'inline; filename="' + invoiceName +'"'
     //     ); 
     //   res.send(data);
-    // }); // in this way the the file it's read entirely in the memory, this is OK for small files, but if the file is large it will take a lot of time(because of this, this is not the best approach) it is better if we are streaming it
+    // }); // in this way the the file it's read entirely in the memory, this is OK for small files, but if the file is large it will take a lot of time(because of this, this is not the best approach, this even can overload the server memory) it is better if we are streaming it
     const file = fs.createReadStream(invoicePath); // here we are creating a Read Stream from 'invoicePath'
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
@@ -19662,7 +19709,7 @@ exports.postEditProduct = (req, res, next) => {
       product.price = updatedPrice;
       product.description = updatedDesc;
       if(image) { 
-        fileHelper.deteleFile(product.imageUrl); // here we are deleting the old image as we can see(i guess)
+        fileHelper.deteleFile(product.imageUrl); // here we are deleting the old image as we can see, when we want to edit the product(i guess)
         product.imageUrl = image.path; 
       }
       return product.save().then(result => {
@@ -19704,8 +19751,8 @@ exports.postDeleteProduct = (req, res, next) => {
         return next(new Error('Product not found.'));
       }
       fileHelper.deleteFile(product.imageUrl); // here as well we are deleting the image from file system
-      return Product.deleteOne({ _id: prodId, userId: req.user._id });
-    })
+      return Product.deleteOne({ _id: prodId, userId: req.user._id }); // and we are deleting the product from the database in the same 'then' block because we don't don't the product to be delete it from the databese before we delete the image from file system
+    }) 
     .then(() => {
       console.log('DESTROYED PRODUCT');
       res.redirect('/admin/products');
@@ -19777,7 +19824,7 @@ exports.getIndex = (req, res, next) => {
   const page = req.query.page; // store the query of the page which is take from the url from views
   Product.find()
     .skip((page - 1) * ITEMS_PER_PAGE) // this will skip this amount of products
-    .limit(ITEMS_PER_PAGE) // this will limit to this amount of products
+    .limit(ITEMS_PER_PAGE) // this will limit to this amount of products on a page
     .then(products => {
       res.render('shop/index', {
         prods: products,
@@ -20229,6 +20276,24 @@ exports.getIndex = (req, res, next) => {
     return next(error);
   });
 };
+
+// /views/shop/index.ejs
+
+ <section class="pagination">
+                <% if (currentPage !== 1 && previousPage !== 1) { %>
+                    <a href="?page=1">1</a>
+                <% } %>
+                <% if (hasPreviousPage) { %>
+                    <a href="?page=<%= previousPage %>"><%= previousPage %></a>
+                <% } %>
+                <a href="?page=<%= currentPage %>" class="active"><%= currentPage %></a>
+                <% if (hasNextPage) { %>
+                    <a href="?page=<%= nextPage %>"><%= nextPage %></a>
+                <% } %>
+                <% if (lastPage !== currentPage && nextPage !== lastPage) { %>
+                    <a href="?page=<%= lastPage %>"><%= lastPage %></a>
+                <% } %>
+              </section> 
 
 
 
